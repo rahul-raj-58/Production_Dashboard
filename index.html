@@ -3,29 +3,20 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spyne — Complete Production Analytics</title>
+<title>Spyne — SKU Production Analytics</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --bg:#f6f6f4; --bg-card:#ffffff;
-  --ink-900:#0e0e0c; --ink-700:#46453d; --ink-500:#6e6d5e; --ink-300:#aeada0; --ink-100:#e7e7e2; --ink-50:#f0efe9;
+  --ink-900:#0e0e0c; --ink-700:#46453d; --ink-500:#6e6d5e; --ink-300:#aeada0; --ink-100:#e7e7e2;
   --line:#e1e0d8;
   --accent:#ff5b14; --accent-soft:#ffe9dc;
   --positive:#2f7d4f; --negative:#c2410c;
-  --c1:#ff5b14; --c2:#2f7d4f; --c3:#0e6ba8; --c4:#a83279; --c5:#c2410c; --c6:#7d5a2f; --c7:#3a7d44; --c8:#5d3a8e;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{
-  background:var(--bg); color:var(--ink-900);
-  font-family:'Geist',system-ui,sans-serif;
-  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-  font-size:14px; line-height:1.5;
-}
-body::before{
-  content:''; position:fixed; inset:0; pointer-events:none; z-index:1; opacity:.025;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-}
+html,body{background:var(--bg);color:var(--ink-900);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.025;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
 .font-display{font-family:'Bricolage Grotesque',serif;font-variation-settings:'wght' 600,'opsz' 32}
 .font-mono{font-family:'JetBrains Mono',monospace}
 .numeric{font-feature-settings:'tnum' 1,'lnum' 1}
@@ -33,23 +24,15 @@ body::before{
 main{position:relative;min-height:100vh;max-width:1600px;margin:0 auto;padding:40px 64px}
 @media (max-width:900px){main{padding:32px 24px}}
 
-/* Header */
-header.app-header{
-  margin-bottom:40px;padding-bottom:32px;border-bottom:1px solid var(--line);
-  display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;
-}
+header.app-header{margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid var(--line);display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .eyebrow{font-family:'Bricolage Grotesque',serif;font-size:10px;text-transform:uppercase;letter-spacing:.3em;color:var(--accent);font-weight:600}
-h1.title{font-family:'Bricolage Grotesque',serif;font-size:64px;line-height:.95;letter-spacing:-.02em;margin-top:8px;font-weight:700}
-@media (max-width:700px){h1.title{font-size:44px}}
+h1.title{font-family:'Bricolage Grotesque',serif;font-size:60px;line-height:.95;letter-spacing:-.02em;margin-top:8px;font-weight:700}
+@media (max-width:700px){h1.title{font-size:42px}}
 .meta{text-align:right;font-family:'JetBrains Mono',monospace}
 .meta .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:var(--ink-500)}
 .meta .val{font-size:14px;color:var(--ink-900);margin-top:4px}
 
-/* Data source banner */
-.data-banner{
-  display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:24px;
-  border:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px;
-}
+.data-banner{display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:20px;border:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px}
 .data-banner.loading{background:#fff;color:var(--ink-700)}
 .data-banner.success{background:rgba(47,125,79,.06);color:#2f7d4f;border-color:rgba(47,125,79,.3)}
 .data-banner.error{background:rgba(194,65,12,.06);color:var(--negative);border-color:rgba(194,65,12,.3);flex-direction:column;align-items:flex-start}
@@ -57,61 +40,38 @@ h1.title{font-family:'Bricolage Grotesque',serif;font-size:64px;line-height:.95;
 .data-banner.loading .icon{background:var(--ink-300);animation:pulse 1.2s ease-in-out infinite}
 .data-banner.success .icon{background:#2f7d4f}
 .data-banner.error .icon{background:var(--negative)}
-.data-banner .body{flex:1;min-width:0}
-.data-banner .body strong{font-weight:600}
-.data-banner pre{margin-top:8px;padding:10px 12px;background:#0e0e0c;color:#f6f6f4;font-size:11px;width:100%;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.data-banner .body{flex:1}
 .data-banner a{color:inherit;text-decoration:underline}
-.data-banner ol{margin:8px 0 0 20px;padding:0}
-.data-banner ol li{margin:4px 0}
+.data-banner pre{margin-top:8px;padding:10px;background:#0e0e0c;color:#f6f6f4;font-size:11px;width:100%;overflow-x:auto;white-space:pre-wrap}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-/* Filter bar */
-.filter-bar{
-  display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:24px;
-  padding:16px;background:#fff;border:1px solid var(--line);
-}
-.filter-bar label{
-  font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;
-  letter-spacing:.15em;color:var(--ink-500);margin-right:6px;
-}
-.filter-bar select,.filter-bar input{
-  font-family:'JetBrains Mono',monospace;font-size:12px;
-  padding:6px 10px;border:1px solid var(--line);background:#fff;color:var(--ink-900);
-  cursor:pointer;
-}
-.filter-bar select:focus,.filter-bar input:focus{outline:none;border-color:var(--accent)}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:24px;padding:16px;background:#fff;border:1px solid var(--line)}
+.filter-bar label{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--ink-500);margin-right:6px}
+.filter-bar select{font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 10px;border:1px solid var(--line);background:#fff;color:var(--ink-900);cursor:pointer}
+.filter-bar select:focus{outline:none;border-color:var(--accent)}
 .filter-bar .group{display:flex;align-items:center;gap:4px}
-.filter-bar button.reset{
-  background:transparent;border:1px solid var(--line);padding:6px 10px;
-  font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;
-  letter-spacing:.1em;cursor:pointer;color:var(--ink-700);
-}
+.filter-bar button.reset{background:transparent;border:1px solid var(--line);padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;color:var(--ink-700)}
 .filter-bar button.reset:hover{background:var(--ink-100)}
-.filter-stat{
-  margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-700);
-}
+.filter-stat{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-700)}
 .filter-stat strong{color:var(--ink-900);font-weight:600}
 
-/* Card */
 .card{background:var(--bg-card);border:1px solid var(--line);padding:24px}
 
-/* Grids */
 .summary-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:24px}
 @media (max-width:1300px){.summary-grid{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:600px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
+
 .section{margin-bottom:24px}
 .split-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
-.split-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:24px}
 .split-2-1{display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:24px}
-@media (max-width:1100px){.split-2,.split-3,.split-2-1{grid-template-columns:1fr}}
+.split-3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:24px}
+@media (max-width:1100px){.split-2,.split-2-1,.split-3{grid-template-columns:1fr}}
 
-/* Stat tile */
 .stat-tile{display:flex;flex-direction:column;justify-content:space-between;min-height:130px;padding:20px}
 .stat-tile .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--ink-500);font-family:'JetBrains Mono',monospace}
-.stat-tile .val{font-family:'Bricolage Grotesque',serif;font-size:40px;line-height:1;color:var(--ink-900);margin-top:14px;font-weight:600}
+.stat-tile .val{font-family:'Bricolage Grotesque',serif;font-size:38px;line-height:1;color:var(--ink-900);margin-top:14px;font-weight:600}
 .stat-tile .sub{font-size:11px;color:var(--ink-500);font-family:'JetBrains Mono',monospace;margin-top:6px}
 
-/* Section heads */
 .section-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap}
 .section-head h3{font-family:'Bricolage Grotesque',serif;font-size:22px;color:var(--ink-900);font-weight:600}
 .section-head p{font-size:12px;color:var(--ink-500);font-family:'JetBrains Mono',monospace;margin-top:4px}
@@ -119,19 +79,15 @@ h1.title{font-family:'Bricolage Grotesque',serif;font-size:64px;line-height:.95;
 .totals-right .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-500);font-family:'JetBrains Mono',monospace}
 .totals-right .val{font-family:'Bricolage Grotesque',serif;font-size:22px;color:var(--ink-900);font-weight:600}
 
-/* Toggle */
 .toggle{display:inline-flex;border:1px solid var(--line)}
-.toggle button{background:transparent;border:none;padding:6px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-700);cursor:pointer;transition:all .15s}
+.toggle button{background:transparent;border:none;padding:6px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-700);cursor:pointer}
 .toggle button + button{border-left:1px solid var(--line)}
 .toggle button:hover{background:var(--ink-100)}
 .toggle button.active{background:var(--ink-900);color:var(--bg)}
 
-/* Chart container */
 .chart-wrap{height:280px;position:relative}
 .chart-wrap-sm{height:220px;position:relative}
-.chart-wrap-tall{height:320px;position:relative}
 
-/* Table */
 table{width:100%;border-collapse:collapse}
 th{text-align:left;padding-bottom:12px;font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--ink-500);font-family:'JetBrains Mono',monospace;font-weight:500;border-bottom:1px solid var(--line)}
 th.num{text-align:right}
@@ -139,10 +95,9 @@ th.sortable{cursor:pointer;user-select:none}
 th.sortable:hover{color:var(--ink-900)}
 th.sortable .arrow{display:inline-block;margin-left:4px;opacity:.4}
 th.sortable.active .arrow{opacity:1;color:var(--accent)}
-td{padding:10px 8px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+td{padding:10px 8px;border-bottom:1px solid var(--line);font-size:13px}
 td:first-child{padding-left:0}
 td:last-child{padding-right:0}
-tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(231,231,226,.4)}
 td.num{text-align:right;font-family:'JetBrains Mono',monospace;font-feature-settings:'tnum' 1}
 td.mono{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-700)}
@@ -150,21 +105,10 @@ td.mono{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-70
 .share-bar{height:6px;background:var(--ink-100);position:relative;width:100%;min-width:80px}
 .share-bar > span{position:absolute;inset:0 auto 0 0;background:var(--accent)}
 
-/* Status badge */
-.status-badge{
-  display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;
-  font-family:'JetBrains Mono',monospace;padding:2px 6px;
-}
-.status-completed{background:rgba(47,125,79,.12);color:#2f7d4f}
-.status-in_progress{background:rgba(255,91,20,.12);color:#ff5b14}
-.status-pending{background:rgba(174,173,160,.25);color:#56564a}
-.status-rejected{background:rgba(194,65,12,.12);color:#c2410c}
-
-/* POC list */
 .poc-list{max-height:520px;overflow-y:auto}
 .poc-row{border-bottom:1px solid var(--line)}
 .poc-row:last-child{border-bottom:none}
-.poc-toggle{display:flex;align-items:center;width:100%;padding:16px;background:transparent;border:none;cursor:pointer;text-align:left;gap:16px;transition:background .15s}
+.poc-toggle{display:flex;align-items:center;width:100%;padding:16px;background:transparent;border:none;cursor:pointer;text-align:left;gap:16px}
 .poc-toggle:hover{background:rgba(231,231,226,.4)}
 .poc-toggle .email{flex:1;min-width:0}
 .poc-toggle .email .e{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -182,24 +126,12 @@ td.mono{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-70
 .poc-detail-item .names .team{color:var(--ink-500);font-family:'JetBrains Mono',monospace}
 .poc-detail-item .n{font-family:'JetBrains Mono',monospace;color:var(--ink-700)}
 
-/* Status panel */
-.status-flex{display:flex;align-items:center;gap:24px;margin-bottom:20px;flex-wrap:wrap}
-.donut-wrap{width:140px;height:140px;position:relative;flex-shrink:0}
-.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
-.donut-center .n{font-family:'Bricolage Grotesque',serif;font-size:26px;line-height:1;color:var(--ink-900);font-weight:600}
-.donut-center .l{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-500);font-family:'JetBrains Mono',monospace;margin-top:4px}
-.status-legend{flex:1;display:flex;flex-direction:column;gap:8px;min-width:140px}
-.status-legend .item{display:flex;align-items:center;gap:8px;font-size:12px}
-.status-legend .swatch{width:8px;height:8px;flex-shrink:0}
-.status-legend .label{flex:1;color:var(--ink-700);text-transform:capitalize}
-.status-legend .n{font-family:'JetBrains Mono',monospace;color:var(--ink-900)}
+.histo-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px}
+.histo-row .lbl{width:70px;flex-shrink:0;font-family:'JetBrains Mono',monospace;color:var(--ink-700)}
+.histo-row .bar-wrap{flex:1;height:8px;background:var(--ink-100);position:relative}
+.histo-row .bar{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+.histo-row .n{font-family:'JetBrains Mono',monospace;color:var(--ink-900);width:50px;text-align:right}
 
-.list-head{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--ink-500);font-family:'JetBrains Mono',monospace;margin-bottom:10px;padding-top:14px;border-top:1px solid var(--line)}
-.list-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0}
-.list-row .r{color:var(--ink-700)}
-.list-row .n{font-family:'JetBrains Mono',monospace;color:var(--ink-900)}
-
-/* Search box for image table */
 .search-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
 .search-row input{flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px;background:#fff}
 .search-row input:focus{outline:none;border-color:var(--accent)}
@@ -207,26 +139,16 @@ td.mono{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-70
 .pagination button{background:transparent;border:1px solid var(--line);padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;color:var(--ink-700)}
 .pagination button:hover:not(:disabled){background:var(--ink-100)}
 .pagination button:disabled{opacity:.3;cursor:not-allowed}
-.page-info{display:flex;align-items:center;gap:8px}
 
-/* Image table specific */
-.image-table-wrap{overflow-x:auto;max-width:100%}
-.image-table{min-width:1200px}
-.rejected-cell{color:var(--negative);font-style:italic;font-size:11px}
-
-/* Footer */
 footer{padding-top:32px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ink-500)}
 
-/* Animations */
 @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .rise{animation:rise .5s cubic-bezier(0.2,0.7,0.3,1) both}
-.d1{animation-delay:.05s}.d2{animation-delay:.08s}.d3{animation-delay:.11s}.d4{animation-delay:.14s}
-.d5{animation-delay:.17s}.d6{animation-delay:.2s}.d7{animation-delay:.23s}.d8{animation-delay:.26s}
-.d9{animation-delay:.29s}.d10{animation-delay:.32s}
+.d1{animation-delay:.05s}.d2{animation-delay:.08s}.d3{animation-delay:.11s}.d4{animation-delay:.14s}.d5{animation-delay:.17s}.d6{animation-delay:.2s}.d7{animation-delay:.23s}.d8{animation-delay:.26s}.d9{animation-delay:.29s}.d10{animation-delay:.32s}
 
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--ink-300);border-radius:0}
+::-webkit-scrollbar-thumb{background:var(--ink-300)}
 ::-webkit-scrollbar-thumb:hover{background:var(--ink-500)}
 </style>
 </head>
@@ -234,130 +156,65 @@ footer{padding-top:32px;border-top:1px solid var(--line);display:flex;justify-co
 <main>
   <header class="app-header rise">
     <div>
-      <div class="eyebrow">Spyne · AI Production</div>
-      <h1 class="title">Complete<br>Analytics</h1>
+      <div class="eyebrow">Spyne · SKU Production</div>
+      <h1 class="title">SKU<br>Analytics</h1>
     </div>
     <div class="meta">
       <div class="lbl">Last updated</div>
       <div class="val" id="lastUpdated">—</div>
-      <div class="lbl" style="margin-top:8px">First 2,000 rows</div>
+      <div class="lbl" style="margin-top:8px">First 2,000 SKUs</div>
     </div>
   </header>
 
-  <!-- Data source status banner -->
   <div id="dataBanner" class="data-banner loading rise d1">
     <span class="icon"></span>
-    <div class="body">
-      <strong>Loading data from Metabase…</strong>
-    </div>
+    <div class="body"><strong>Loading data…</strong></div>
   </div>
 
-  <!-- Filter bar -->
   <div class="filter-bar rise d1">
-    <div class="group">
-      <label>Enterprise</label>
-      <select id="fltEnterprise"><option value="">All</option></select>
-    </div>
-    <div class="group">
-      <label>Team</label>
-      <select id="fltTeam"><option value="">All</option></select>
-    </div>
-    <div class="group">
-      <label>Segment</label>
-      <select id="fltSegment"><option value="">All</option></select>
-    </div>
-    <div class="group">
-      <label>Category</label>
-      <select id="fltCategory"><option value="">All</option></select>
-    </div>
-    <div class="group">
-      <label>Status</label>
-      <select id="fltStatus"><option value="">All</option></select>
-    </div>
-    <div class="group">
-      <label>CS POC</label>
-      <select id="fltCS"><option value="">All</option></select>
-    </div>
-    <div class="group">
-      <label>OB POC</label>
-      <select id="fltOB"><option value="">All</option></select>
-    </div>
+    <div class="group"><label>Enterprise</label><select id="fltEnterprise"><option value="">All</option></select></div>
+    <div class="group"><label>Team</label><select id="fltTeam"><option value="">All</option></select></div>
+    <div class="group"><label>Segment</label><select id="fltSegment"><option value="">All</option></select></div>
+    <div class="group"><label>CS POC</label><select id="fltCS"><option value="">All</option></select></div>
+    <div class="group"><label>OB POC</label><select id="fltOB"><option value="">All</option></select></div>
     <button class="reset" onclick="resetFilters()">Reset</button>
-    <div class="filter-stat">Showing <strong id="filteredCount">—</strong> of <strong id="totalCount">—</strong> rows</div>
+    <div class="filter-stat">Showing <strong id="filteredCount">—</strong> of <strong id="totalCount">—</strong> SKUs</div>
   </div>
 
-  <!-- Summary tiles -->
   <section class="summary-grid">
-    <div class="card stat-tile rise d2"><div class="lbl">Total images</div><div><div class="val numeric" id="m-images">—</div><div class="sub" id="m-images-sub">—</div></div></div>
-    <div class="card stat-tile rise d3"><div class="lbl">SKUs</div><div><div class="val numeric" id="m-skus">—</div><div class="sub">distinct</div></div></div>
-    <div class="card stat-tile rise d4"><div class="lbl">Enterprises</div><div><div class="val numeric" id="m-ent">—</div><div class="sub" id="m-ent-sub">—</div></div></div>
-    <div class="card stat-tile rise d5"><div class="lbl">Teams</div><div><div class="val numeric" id="m-teams">—</div><div class="sub">active</div></div></div>
-    <div class="card stat-tile rise d6"><div class="lbl">Completion</div><div><div class="val numeric" id="m-rate">—</div><div class="sub">of total</div></div></div>
-    <div class="card stat-tile rise d7"><div class="lbl">Avg / day</div><div><div class="val numeric" id="m-avg">—</div><div class="sub" id="m-avg-sub">—</div></div></div>
+    <div class="card stat-tile rise d2"><div class="lbl">SKUs</div><div><div class="val numeric" id="m-skus">—</div><div class="sub">distinct</div></div></div>
+    <div class="card stat-tile rise d3"><div class="lbl">Total images</div><div><div class="val numeric" id="m-images">—</div><div class="sub" id="m-images-sub">across all SKUs</div></div></div>
+    <div class="card stat-tile rise d4"><div class="lbl">Avg images / SKU</div><div><div class="val numeric" id="m-avg-images">—</div><div class="sub" id="m-avg-sub">—</div></div></div>
+    <div class="card stat-tile rise d5"><div class="lbl">Enterprises</div><div><div class="val numeric" id="m-ent">—</div><div class="sub" id="m-ent-sub">—</div></div></div>
+    <div class="card stat-tile rise d6"><div class="lbl">Teams</div><div><div class="val numeric" id="m-teams">—</div><div class="sub">active</div></div></div>
+    <div class="card stat-tile rise d7"><div class="lbl">Date span</div><div><div class="val numeric" style="font-size:24px" id="m-span">—</div><div class="sub" id="m-span-sub">first → last SKU</div></div></div>
   </section>
 
-  <!-- Daily trend -->
   <section class="section">
     <div class="card rise d8">
       <div class="section-head">
-        <div>
-          <h3>Daily Image Volume</h3>
-          <p>Count of ai.image_id grouped by created_on · stacked by status</p>
-        </div>
-        <div class="totals-right">
-          <div class="lbl">Total in window</div>
-          <div class="val numeric" id="dailyTotal">—</div>
-        </div>
+        <div><h3>Daily SKU Volume</h3><p>New SKUs by first_image_created_on, with images per day</p></div>
+        <div class="totals-right"><div class="lbl">Total SKUs</div><div class="val numeric" id="dailyTotal">—</div></div>
       </div>
       <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
     </div>
   </section>
 
-  <!-- Daily SKU + Hourly heatmap -->
   <section class="split-2">
-    <div class="card rise d9">
-      <div class="section-head">
-        <div><h3>Daily SKU Volume</h3><p>Distinct sku_id created per day</p></div>
-      </div>
-      <div class="chart-wrap-sm"><canvas id="skuDailyChart"></canvas></div>
+    <div class="card rise d8">
+      <div class="section-head"><div><h3>Images per SKU distribution</h3><p>How many images are bundled with each SKU</p></div></div>
+      <div id="histoContainer"></div>
     </div>
-    <div class="card rise d9">
-      <div class="section-head">
-        <div><h3>Hour of Day Distribution</h3><p>When images get created across all days</p></div>
-      </div>
-      <div class="chart-wrap-sm"><canvas id="hourlyChart"></canvas></div>
-    </div>
-  </section>
-
-  <!-- Status + Category + Segment -->
-  <section class="split-3">
-    <div class="card rise d9">
-      <h3 class="font-display" style="font-size:22px;font-weight:600">Status</h3>
-      <p class="font-mono" style="font-size:12px;color:var(--ink-500);margin-top:4px;margin-bottom:20px">All statuses across filtered data</p>
-      <div class="status-flex">
-        <div class="donut-wrap"><canvas id="donutChart"></canvas>
-          <div class="donut-center"><div class="n" id="donutRate">—</div><div class="l">completed</div></div>
-        </div>
-        <div class="status-legend" id="statusLegend"></div>
-      </div>
-    </div>
-    <div class="card rise d9">
-      <h3 class="font-display" style="font-size:22px;font-weight:600">Image Categories</h3>
-      <p class="font-mono" style="font-size:12px;color:var(--ink-500);margin-top:4px;margin-bottom:20px">Distribution by image_category</p>
-      <div class="chart-wrap-sm"><canvas id="categoryChart"></canvas></div>
-    </div>
-    <div class="card rise d9">
-      <h3 class="font-display" style="font-size:22px;font-weight:600">Customer Segments</h3>
-      <p class="font-mono" style="font-size:12px;color:var(--ink-500);margin-top:4px;margin-bottom:20px">Volume by customer-segment</p>
+    <div class="card rise d8">
+      <div class="section-head"><div><h3>Customer Segment Mix</h3><p>SKUs and images by customer_segment</p></div></div>
       <div class="chart-wrap-sm"><canvas id="segmentChart"></canvas></div>
     </div>
   </section>
 
-  <!-- Enterprise table + Rejection reasons -->
   <section class="split-2-1">
     <div class="card rise d9">
       <div class="section-head">
-        <div><h3>Volume by Enterprise</h3><p id="entSub">Distinct images, SKUs, and teams per enterprise</p></div>
+        <div><h3>Volume by Enterprise</h3><p id="entSub">SKUs and images per enterprise</p></div>
         <div class="toggle">
           <button id="btnEnt" class="active" onclick="setEntView('enterprise')">Enterprise</button>
           <button id="btnTeam" onclick="setEntView('team')">+ Team</button>
@@ -365,25 +222,22 @@ footer{padding-top:32px;border-top:1px solid var(--line);display:flex;justify-co
       </div>
       <div style="overflow-x:auto"><table><thead><tr id="entThead"></tr></thead><tbody id="entTbody"></tbody></table></div>
     </div>
-    <div class="card rise d10">
-      <h3 class="font-display" style="font-size:22px;font-weight:600">Rejection Reasons</h3>
-      <p class="font-mono" style="font-size:12px;color:var(--ink-500);margin-top:4px;margin-bottom:16px">All rejected_comment values</p>
-      <div id="rejectionsList"></div>
+    <div class="card rise d9">
+      <div class="section-head"><div><h3>Top SKUs by images</h3><p>SKUs with the most images bundled</p></div></div>
+      <div style="max-height:400px;overflow-y:auto"><table><thead><tr><th>SKU</th><th class="num">Images</th></tr></thead><tbody id="topSkusBody"></tbody></table></div>
     </div>
   </section>
 
-  <!-- Team detail table -->
   <section class="section">
-    <div class="card rise d10">
+    <div class="card rise d9">
       <div class="section-head">
-        <div><h3>All Teams</h3><p>Complete breakdown of every enterprise + team combination</p></div>
+        <div><h3>All Teams</h3><p>Every enterprise + team combination with SKU and image counts</p></div>
         <div class="totals-right"><div class="lbl">Teams</div><div class="val numeric" id="teamsTotal">—</div></div>
       </div>
       <div style="overflow-x:auto;max-height:480px;overflow-y:auto"><table><thead><tr id="teamThead"></tr></thead><tbody id="teamTbody"></tbody></table></div>
     </div>
   </section>
 
-  <!-- POC mapping -->
   <section class="split-2">
     <div class="card rise d10" style="padding:0">
       <div style="padding:24px 24px 16px;border-bottom:1px solid var(--line)">
@@ -401,22 +255,19 @@ footer{padding-top:32px;border-top:1px solid var(--line);display:flex;justify-co
     </div>
   </section>
 
-  <!-- All image rows -->
   <section class="section">
     <div class="card rise d10">
       <div class="section-head">
-        <div><h3>All Image Records</h3><p>Every column from the source table · filterable and sortable</p></div>
+        <div><h3>All SKU Records</h3><p>Every column from the source · filterable and sortable</p></div>
         <div class="totals-right"><div class="lbl">Rows</div><div class="val numeric" id="rowsTotal">—</div></div>
       </div>
       <div class="search-row">
-        <input id="rowSearch" placeholder="Search image_id, sku_id, comment, any text..." />
+        <input id="rowSearch" placeholder="Search any column..." />
         <button class="reset" onclick="exportCSV()">Export CSV</button>
       </div>
-      <div class="image-table-wrap">
-        <table class="image-table"><thead><tr id="rowsThead"></tr></thead><tbody id="rowsTbody"></tbody></table>
-      </div>
+      <div style="overflow-x:auto"><table style="min-width:1100px"><thead><tr id="rowsThead"></tr></thead><tbody id="rowsTbody"></tbody></table></div>
       <div class="pagination">
-        <div class="page-info">
+        <div style="display:flex;align-items:center;gap:8px">
           <button id="pgPrev" onclick="changePage(-1)">← Prev</button>
           <span>Page <span id="pgNum">1</span> of <span id="pgTotal">1</span></span>
           <button id="pgNext" onclick="changePage(1)">Next →</button>
@@ -427,52 +278,36 @@ footer{padding-top:32px;border-top:1px solid var(--line);display:flex;justify-co
   </section>
 
   <footer>
-    <div>Source: metabase.spyne.ai · question 12089 · public UUID d5777560…</div>
-    <div>Data fetched live from Metabase public endpoint</div>
+    <div>Source: metabase.spyne.ai · question 12089</div>
+    <div>Data: first 2,000 SKUs · grain = one SKU per row</div>
   </footer>
 </main>
 
 <script>
-/* ============================================================
-   DATA LAYER — Wired to Metabase public question
-   ============================================================ */
-
-// Metabase public question UUID for question 12089
-const METABASE_BASE = 'https://metabase.spyne.ai';
-const METABASE_UUID = 'd5777560-dcd6-427f-a8c1-e745c4d24aa6';
-
-// Calls our own Vercel proxy (/api/data) which forwards to Metabase server-side.
-// This avoids CORS and adds 60s edge caching for instant repeat loads.
 const METABASE_JSON_URL = '/api/data';
+const CACHE_KEY = 'spyne_sku_data_v2';
+const CACHE_TTL_MS = 30 * 60 * 1000;
 
+/* ============================================================
+   DATA LAYER
+   ============================================================ */
 function normalizeRow(raw) {
-  // Preserve every column as-is from Metabase; only add safe fallback access
-  // for the dotted column names (ai.image_id, etc) so JS can read them.
-  // The dashboard only uses the keys it needs; all other columns are kept untouched.
-  const get = (k1, k2) => raw[k1] ?? raw[k2] ?? '';
+  const get = function (k1, k2) { return raw[k1] !== undefined ? raw[k1] : (raw[k2] !== undefined ? raw[k2] : null); };
+  const imgCount = Number(raw.distinct_image_count) || 0;
   return {
-    // raw passthrough for "all records" table — preserves every original column
     __raw: raw,
-    // normalized accessors used by aggregations
-    ai_enterprise_id: String(get('ai.enterprise_id', 'ai_enterprise_id')),
-    enterprise_name: String(raw.enterprise_name ?? ''),
-    ai_team_id: String(get('ai.team_id', 'ai_team_id')),
-    etd_team_name: String(get('etd.team_name', 'etd_team_name')),
-    customer_segment: String(get('customer-segment', 'customer_segment')),
-    cs_poc_email: String(raw.cs_poc_email ?? ''),
-    ob_poc_email: String(raw.ob_poc_email ?? ''),
-    ai_image_id: String(get('ai.image_id', 'ai_image_id')),
-    sku_id: String(raw.sku_id ?? ''),
-    image_category: String(raw.image_category ?? ''),
-    status: raw.status ?? 'pending',
-    rejected_comment: raw.rejected_comment ?? null,
-    created_on: String(raw.created_on ?? ''),
+    ai_enterprise_id: String(get('ai.enterprise_id', 'ai_enterprise_id') || ''),
+    enterprise_name: String(raw.enterprise_name || ''),
+    ai_team_id: String(get('ai.team_id', 'ai_team_id') || ''),
+    etd_team_name: String(get('etd.team_name', 'etd_team_name') || ''),
+    customer_segment: String(raw.customer_segment || ''),
+    cs_poc_email: String(raw.cs_poc_email || ''),
+    ob_poc_email: String(raw.ob_poc_email || ''),
+    ai_sku_id: String(get('ai.sku_id', 'ai_sku_id') || raw.sku_id || ''),
+    distinct_image_count: imgCount,
+    first_image_created_on: String(raw.first_image_created_on || ''),
   };
 }
-
-// Cache key — bump version if data shape changes
-const CACHE_KEY = 'spyne_metabase_data_v1';
-const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 function loadCache() {
   try {
@@ -480,250 +315,260 @@ function loadCache() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.rows)) return null;
-    return parsed; // { rows, fetchedAt }
+    return parsed;
   } catch (e) { return null; }
 }
-
 function saveCache(rows) {
-  try {
-    const payload = JSON.stringify({ rows: rows, fetchedAt: Date.now() });
-    localStorage.setItem(CACHE_KEY, payload);
-  } catch (e) {
-    // localStorage might be full or disabled — silently ignore
-    console.warn('Could not save to cache:', e);
-  }
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ rows: rows, fetchedAt: Date.now() })); } catch (e) {}
 }
-
-function clearCache() {
-  try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
-}
+function clearCache() { try { localStorage.removeItem(CACHE_KEY); } catch (e) {} }
 
 async function fetchWithTimeout(url, ms) {
-  const controller = new AbortController();
-  const timer = setTimeout(function () { controller.abort(); }, ms);
-  try {
-    const res = await fetch(url, { method: 'GET', signal: controller.signal });
-    return res;
-  } finally {
-    clearTimeout(timer);
-  }
+  const ctrl = new AbortController();
+  const t = setTimeout(function () { ctrl.abort(); }, ms);
+  try { return await fetch(url, { method: 'GET', signal: ctrl.signal }); }
+  finally { clearTimeout(t); }
 }
 
 async function fetchData() {
-  // 55 second timeout — Vercel free-tier functions cap at 60s anyway
   let res;
-  try {
-    res = await fetchWithTimeout(METABASE_JSON_URL, 55000);
-  } catch (e) {
-    if (e.name === 'AbortError') {
-      throw new Error('Request timed out after 55 seconds — Metabase query is too slow. Try the cache or contact your Metabase admin to optimize the query.');
-    }
+  try { res = await fetchWithTimeout(METABASE_JSON_URL, 55000); }
+  catch (e) {
+    if (e.name === 'AbortError') throw new Error('Timed out after 55 seconds');
     throw e;
   }
-  if (!res.ok) {
-    throw new Error('Proxy returned HTTP ' + res.status + ' ' + res.statusText);
-  }
+  if (!res.ok) throw new Error('Proxy returned HTTP ' + res.status);
   const payload = await res.json();
   if (payload && payload.__proxy_error) {
-    const e = new Error(payload.message || 'Proxy could not fetch data');
-    e.diagnostic = payload;
-    throw e;
+    const err = new Error(payload.message || 'Proxy could not fetch data');
+    err.diagnostic = payload;
+    throw err;
   }
-  if (!Array.isArray(payload)) {
-    throw new Error('Response was not an array. Got: ' + typeof payload);
-  }
+  if (!Array.isArray(payload)) throw new Error('Response was not an array: ' + typeof payload);
   return payload.map(normalizeRow);
 }
 
 /* ============================================================
-   AGGREGATIONS
+   AGGREGATIONS — designed for SKU-grain rows
    ============================================================ */
-function dailyImageCounts(rows) {
-  const m = new Map();
-  rows.forEach(r => { const day = r.created_on.slice(0,10); m.set(day, (m.get(day)||0)+1); });
-  return Array.from(m.entries()).sort((a,b)=>a[0].localeCompare(b[0])).map(([date,count])=>({date,count}));
-}
-
-function dailyByStatus(rows) {
-  const days = new Set();
-  const statuses = new Set();
-  rows.forEach(r => { days.add(r.created_on.slice(0,10)); statuses.add(r.status); });
-  const sortedDays = Array.from(days).sort();
-  const sortedStatuses = Array.from(statuses).sort();
-  const matrix = {};
-  sortedStatuses.forEach(s => { matrix[s] = sortedDays.map(()=>0); });
-  rows.forEach(r => {
-    const dayIdx = sortedDays.indexOf(r.created_on.slice(0,10));
-    if (dayIdx >= 0) matrix[r.status][dayIdx]++;
-  });
-  return { days: sortedDays, statuses: sortedStatuses, matrix };
-}
-
 function dailySkuCounts(rows) {
   const m = new Map();
-  rows.forEach(r => {
-    const day = r.created_on.slice(0,10);
-    if (!m.has(day)) m.set(day, new Set());
-    m.get(day).add(r.sku_id);
+  rows.forEach(function (r) {
+    if (!r.first_image_created_on) return;
+    const day = r.first_image_created_on.slice(0, 10);
+    if (!m.has(day)) m.set(day, { skus: 0, images: 0 });
+    const e = m.get(day);
+    e.skus += 1;
+    e.images += r.distinct_image_count;
   });
-  return Array.from(m.entries()).sort((a,b)=>a[0].localeCompare(b[0])).map(([date,set])=>({date,count:set.size}));
+  return Array.from(m.entries())
+    .sort(function (a, b) { return a[0].localeCompare(b[0]); })
+    .map(function (entry) { return { date: entry[0], skus: entry[1].skus, images: entry[1].images }; });
 }
 
-function hourlyDistribution(rows) {
-  const arr = Array(24).fill(0);
-  rows.forEach(r => { const h = new Date(r.created_on).getHours(); arr[h]++; });
-  return arr;
+function enterpriseAggregates(rows) {
+  const m = new Map();
+  rows.forEach(function (r) {
+    if (!m.has(r.enterprise_name)) {
+      m.set(r.enterprise_name, {
+        enterprise_name: r.enterprise_name,
+        sku_count: 0,
+        image_count: 0,
+        teams: new Set(),
+        segment: r.customer_segment,
+        cs: new Set(),
+        ob: new Set(),
+      });
+    }
+    const e = m.get(r.enterprise_name);
+    e.sku_count += 1;
+    e.image_count += r.distinct_image_count;
+    e.teams.add(r.etd_team_name);
+    if (r.cs_poc_email) e.cs.add(r.cs_poc_email);
+    if (r.ob_poc_email) e.ob.add(r.ob_poc_email);
+  });
+  return Array.from(m.values()).map(function (v) {
+    return {
+      enterprise_name: v.enterprise_name,
+      sku_count: v.sku_count,
+      image_count: v.image_count,
+      team_count: v.teams.size,
+      customer_segment: v.segment,
+      cs_pocs: Array.from(v.cs),
+      ob_pocs: Array.from(v.ob),
+    };
+  }).sort(function (a, b) { return b.image_count - a.image_count; });
 }
 
 function enterpriseTeamAggregates(rows) {
   const m = new Map();
-  rows.forEach(r => {
-    const key = `${r.enterprise_name}|${r.etd_team_name}`;
-    if (!m.has(key)) m.set(key, { enterprise_name:r.enterprise_name, team_name:r.etd_team_name, images:new Set(), skus:new Set(), segment:r.customer_segment, cs:new Set(), ob:new Set(), statuses:{} });
+  rows.forEach(function (r) {
+    const key = r.enterprise_name + '|' + r.etd_team_name;
+    if (!m.has(key)) {
+      m.set(key, {
+        enterprise_name: r.enterprise_name,
+        team_name: r.etd_team_name,
+        sku_count: 0,
+        image_count: 0,
+        segment: r.customer_segment,
+        cs: new Set(),
+        ob: new Set(),
+      });
+    }
     const e = m.get(key);
-    e.images.add(r.ai_image_id);
-    e.skus.add(r.sku_id);
+    e.sku_count += 1;
+    e.image_count += r.distinct_image_count;
     if (r.cs_poc_email) e.cs.add(r.cs_poc_email);
     if (r.ob_poc_email) e.ob.add(r.ob_poc_email);
-    e.statuses[r.status] = (e.statuses[r.status]||0)+1;
   });
-  return Array.from(m.values()).map(v => ({
-    enterprise_name:v.enterprise_name, team_name:v.team_name,
-    image_count:v.images.size, sku_count:v.skus.size,
-    customer_segment:v.segment,
-    cs_pocs:Array.from(v.cs), ob_pocs:Array.from(v.ob),
-    completed: v.statuses.completed||0,
-    rejected: v.statuses.rejected||0,
-  })).sort((a,b)=>b.image_count - a.image_count);
-}
-
-function enterpriseOnlyAggregates(rows) {
-  const m = new Map();
-  rows.forEach(r => {
-    if (!m.has(r.enterprise_name)) m.set(r.enterprise_name, { enterprise_name:r.enterprise_name, images:new Set(), skus:new Set(), teams:new Set(), segment:r.customer_segment, cs:new Set(), ob:new Set(), statuses:{} });
-    const e = m.get(r.enterprise_name);
-    e.images.add(r.ai_image_id);
-    e.skus.add(r.sku_id);
-    e.teams.add(r.etd_team_name);
-    if (r.cs_poc_email) e.cs.add(r.cs_poc_email);
-    if (r.ob_poc_email) e.ob.add(r.ob_poc_email);
-    e.statuses[r.status] = (e.statuses[r.status]||0)+1;
-  });
-  return Array.from(m.values()).map(v => ({
-    enterprise_name:v.enterprise_name, team_name:'—',
-    image_count:v.images.size, sku_count:v.skus.size, team_count:v.teams.size,
-    customer_segment:v.segment,
-    cs_pocs:Array.from(v.cs), ob_pocs:Array.from(v.ob),
-    completed: v.statuses.completed||0,
-    rejected: v.statuses.rejected||0,
-  })).sort((a,b)=>b.image_count - a.image_count);
+  return Array.from(m.values()).map(function (v) {
+    return {
+      enterprise_name: v.enterprise_name,
+      team_name: v.team_name,
+      sku_count: v.sku_count,
+      image_count: v.image_count,
+      customer_segment: v.segment,
+      cs_pocs: Array.from(v.cs),
+      ob_pocs: Array.from(v.ob),
+    };
+  }).sort(function (a, b) { return b.image_count - a.image_count; });
 }
 
 function pocAggregates(rows, role) {
   const emailKey = role === 'CS' ? 'cs_poc_email' : 'ob_poc_email';
   const m = new Map();
-  rows.forEach(r => {
+  rows.forEach(function (r) {
     const email = r[emailKey];
     if (!email) return;
     if (!m.has(email)) m.set(email, new Map());
     const inner = m.get(email);
-    const key = `${r.enterprise_name}|${r.etd_team_name}`;
-    if (!inner.has(key)) inner.set(key, { enterprise_name:r.enterprise_name, team_name:r.etd_team_name, images:new Set(), skus:new Set() });
-    inner.get(key).images.add(r.ai_image_id);
-    inner.get(key).skus.add(r.sku_id);
+    const key = r.enterprise_name + '|' + r.etd_team_name;
+    if (!inner.has(key)) {
+      inner.set(key, {
+        enterprise_name: r.enterprise_name,
+        team_name: r.etd_team_name,
+        sku_count: 0,
+        image_count: 0,
+      });
+    }
+    const v = inner.get(key);
+    v.sku_count += 1;
+    v.image_count += r.distinct_image_count;
   });
-  return Array.from(m.entries()).map(([email, inner]) => {
-    const enterprises = Array.from(inner.values()).map(v => ({
-      enterprise_name:v.enterprise_name, team_name:v.team_name,
-      image_count:v.images.size, sku_count:v.skus.size,
-    }));
-    const total_images = enterprises.reduce((s,e)=>s+e.image_count,0);
-    const total_skus = enterprises.reduce((s,e)=>s+e.sku_count,0);
-    const total_enterprises = new Set(enterprises.map(e=>e.enterprise_name)).size;
-    return { email, role, enterprises: enterprises.sort((a,b)=>b.image_count-a.image_count), total_images, total_skus, total_enterprises };
-  }).sort((a,b)=>b.total_images - a.total_images);
-}
-
-function statusBreakdown(rows) {
-  const m = new Map();
-  rows.forEach(r => m.set(r.status, (m.get(r.status)||0)+1));
-  return Array.from(m.entries()).map(([status,count])=>({status,count})).sort((a,b)=>b.count-a.count);
-}
-
-function categoryBreakdown(rows) {
-  const m = new Map();
-  rows.forEach(r => m.set(r.image_category, (m.get(r.image_category)||0)+1));
-  return Array.from(m.entries()).map(([category,count])=>({category,count})).sort((a,b)=>b.count-a.count);
+  return Array.from(m.entries()).map(function (entry) {
+    const email = entry[0];
+    const inner = entry[1];
+    const enterprises = Array.from(inner.values());
+    const total_skus = enterprises.reduce(function (s, e) { return s + e.sku_count; }, 0);
+    const total_images = enterprises.reduce(function (s, e) { return s + e.image_count; }, 0);
+    const total_enterprises = new Set(enterprises.map(function (e) { return e.enterprise_name; })).size;
+    return {
+      email: email,
+      role: role,
+      enterprises: enterprises.sort(function (a, b) { return b.image_count - a.image_count; }),
+      total_skus: total_skus,
+      total_images: total_images,
+      total_enterprises: total_enterprises,
+    };
+  }).sort(function (a, b) { return b.total_images - a.total_images; });
 }
 
 function segmentBreakdown(rows) {
   const m = new Map();
-  rows.forEach(r => {
-    if (!m.has(r.customer_segment)) m.set(r.customer_segment, { images:new Set(), skus:new Set(), enterprises:new Set() });
-    const e = m.get(r.customer_segment);
-    e.images.add(r.ai_image_id); e.skus.add(r.sku_id); e.enterprises.add(r.enterprise_name);
+  rows.forEach(function (r) {
+    const key = r.customer_segment || '—';
+    if (!m.has(key)) m.set(key, { segment: key, skus: 0, images: 0, enterprises: new Set() });
+    const e = m.get(key);
+    e.skus += 1;
+    e.images += r.distinct_image_count;
+    e.enterprises.add(r.enterprise_name);
   });
-  return Array.from(m.entries()).map(([segment,v])=>({
-    segment, images:v.images.size, skus:v.skus.size, enterprises:v.enterprises.size
-  })).sort((a,b)=>b.images - a.images);
+  return Array.from(m.values()).map(function (v) {
+    return { segment: v.segment, skus: v.skus, images: v.images, enterprises: v.enterprises.size };
+  }).sort(function (a, b) { return b.images - a.images; });
 }
 
-function rejectionReasons(rows) {
-  const m = new Map();
-  rows.filter(r=>r.status==='rejected' && r.rejected_comment).forEach(r=>{
-    m.set(r.rejected_comment, (m.get(r.rejected_comment)||0)+1);
+function imagesPerSkuHistogram(rows) {
+  // Buckets tuned for typical car photography: 1, 2-5, 6-10, 11-20, 21-50, 51+
+  const buckets = [
+    { label: '1', min: 1, max: 1, count: 0 },
+    { label: '2–5', min: 2, max: 5, count: 0 },
+    { label: '6–10', min: 6, max: 10, count: 0 },
+    { label: '11–20', min: 11, max: 20, count: 0 },
+    { label: '21–50', min: 21, max: 50, count: 0 },
+    { label: '51+', min: 51, max: Infinity, count: 0 },
+  ];
+  rows.forEach(function (r) {
+    const n = r.distinct_image_count;
+    for (let i = 0; i < buckets.length; i++) {
+      if (n >= buckets[i].min && n <= buckets[i].max) { buckets[i].count += 1; break; }
+    }
   });
-  return Array.from(m.entries()).map(([reason,count])=>({reason,count})).sort((a,b)=>b.count-a.count);
+  return buckets;
+}
+
+function topSkus(rows, n) {
+  return rows.slice().sort(function (a, b) { return b.distinct_image_count - a.distinct_image_count; }).slice(0, n || 30);
 }
 
 function summaryMetrics(rows) {
-  const images = new Set(rows.map(r=>r.ai_image_id));
-  const skus = new Set(rows.map(r=>r.sku_id));
-  const enterprises = new Set(rows.map(r=>r.enterprise_name));
-  const teams = new Set(rows.map(r=>`${r.enterprise_name}|${r.etd_team_name}`));
-  const completed = rows.filter(r=>r.status==='completed').length;
+  let totalImages = 0;
+  const enterprises = new Set();
+  const teams = new Set();
+  let minDate = null, maxDate = null;
+  rows.forEach(function (r) {
+    totalImages += r.distinct_image_count;
+    enterprises.add(r.enterprise_name);
+    teams.add(r.enterprise_name + '|' + r.etd_team_name);
+    if (r.first_image_created_on) {
+      const d = r.first_image_created_on.slice(0, 10);
+      if (!minDate || d < minDate) minDate = d;
+      if (!maxDate || d > maxDate) maxDate = d;
+    }
+  });
   return {
-    total_images:images.size, total_skus:skus.size,
-    total_enterprises:enterprises.size, total_teams:teams.size,
-    completion_rate: rows.length>0 ? (completed/rows.length)*100 : 0,
+    total_skus: rows.length,
+    total_images: totalImages,
+    avg_images_per_sku: rows.length ? totalImages / rows.length : 0,
+    total_enterprises: enterprises.size,
+    total_teams: teams.size,
+    min_date: minDate,
+    max_date: maxDate,
   };
 }
 
 /* ============================================================
    STATE & RENDER
    ============================================================ */
-const STATUS_COLORS = {completed:'#2f7d4f',in_progress:'#ff5b14',pending:'#aeada0',rejected:'#c2410c'};
-const PALETTE = ['#ff5b14','#2f7d4f','#0e6ba8','#a83279','#c2410c','#7d5a2f','#3a7d44','#5d3a8e','#d4a017','#8b4513'];
+const PALETTE = ['#ff5b14','#2f7d4f','#0e6ba8','#a83279','#c2410c','#7d5a2f','#3a7d44','#5d3a8e','#d4a017'];
 
 let state = {
   allRows: [],
   filtered: [],
-  filters: { enterprise:'', team:'', segment:'', category:'', status:'', cs:'', ob:'' },
+  filters: { enterprise:'', team:'', segment:'', cs:'', ob:'' },
   entView: 'enterprise',
-  rowSort: { col: 'created_on', dir: 'desc' },
+  rowSort: { col: 'distinct_image_count', dir: 'desc', fromRaw: false },
   rowSearch: '',
   rowPage: 1,
   rowsPerPage: 50,
 };
 let charts = {};
 
-function fmt(n){return n.toLocaleString()}
-function shortDate(iso){return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
-function fullDate(iso){return new Date(iso).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}
-function nowStamp(){return new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}
-function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function fmt(n) { return Number(n).toLocaleString(); }
+function shortDate(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function nowStamp() { return new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}); }
+function escapeHTML(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+function formatDateSafe(s) { if (!s) return ''; const d = new Date(s); if (isNaN(d)) return s; return d.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}); }
 
 function applyFilters() {
   const f = state.filters;
-  state.filtered = state.allRows.filter(r =>
-    (!f.enterprise || r.enterprise_name === f.enterprise) &&
-    (!f.team || r.etd_team_name === f.team) &&
-    (!f.segment || r.customer_segment === f.segment) &&
-    (!f.category || r.image_category === f.category) &&
-    (!f.status || r.status === f.status) &&
-    (!f.cs || r.cs_poc_email === f.cs) &&
-    (!f.ob || r.ob_poc_email === f.ob)
-  );
+  state.filtered = state.allRows.filter(function (r) {
+    return (!f.enterprise || r.enterprise_name === f.enterprise) &&
+           (!f.team || r.etd_team_name === f.team) &&
+           (!f.segment || r.customer_segment === f.segment) &&
+           (!f.cs || r.cs_poc_email === f.cs) &&
+           (!f.ob || r.ob_poc_email === f.ob);
+  });
   state.rowPage = 1;
   document.getElementById('filteredCount').textContent = fmt(state.filtered.length);
   document.getElementById('totalCount').textContent = fmt(state.allRows.length);
@@ -731,31 +576,33 @@ function applyFilters() {
 }
 
 function populateFilters() {
-  const distinct = (key) => Array.from(new Set(state.allRows.map(r=>r[key]).filter(Boolean))).sort();
-  const fill = (id, vals) => {
+  const distinct = function (key) {
+    return Array.from(new Set(state.allRows.map(function (r) { return r[key]; }).filter(Boolean))).sort();
+  };
+  const fill = function (id, vals) {
     const sel = document.getElementById(id);
-    const current = sel.value;
-    sel.innerHTML = '<option value="">All</option>' + vals.map(v=>`<option value="${escapeHTML(v)}">${escapeHTML(v)}</option>`).join('');
-    sel.value = current;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">All</option>' + vals.map(function (v) {
+      return '<option value="' + escapeHTML(v) + '">' + escapeHTML(v) + '</option>';
+    }).join('');
+    sel.value = cur;
   };
   fill('fltEnterprise', distinct('enterprise_name'));
   fill('fltTeam', distinct('etd_team_name'));
   fill('fltSegment', distinct('customer_segment'));
-  fill('fltCategory', distinct('image_category'));
-  fill('fltStatus', distinct('status'));
   fill('fltCS', distinct('cs_poc_email'));
   fill('fltOB', distinct('ob_poc_email'));
 }
 
 function bindFilters() {
-  const map = {fltEnterprise:'enterprise',fltTeam:'team',fltSegment:'segment',fltCategory:'category',fltStatus:'status',fltCS:'cs',fltOB:'ob'};
-  Object.entries(map).forEach(([id,key]) => {
-    document.getElementById(id).addEventListener('change', e => {
-      state.filters[key] = e.target.value;
+  const map = { fltEnterprise:'enterprise', fltTeam:'team', fltSegment:'segment', fltCS:'cs', fltOB:'ob' };
+  Object.keys(map).forEach(function (id) {
+    document.getElementById(id).addEventListener('change', function (e) {
+      state.filters[map[id]] = e.target.value;
       applyFilters();
     });
   });
-  document.getElementById('rowSearch').addEventListener('input', e => {
+  document.getElementById('rowSearch').addEventListener('input', function (e) {
     state.rowSearch = e.target.value.toLowerCase();
     state.rowPage = 1;
     renderRowsTable();
@@ -763,132 +610,73 @@ function bindFilters() {
 }
 
 function resetFilters() {
-  state.filters = { enterprise:'', team:'', segment:'', category:'', status:'', cs:'', ob:'' };
-  ['fltEnterprise','fltTeam','fltSegment','fltCategory','fltStatus','fltCS','fltOB'].forEach(id=>document.getElementById(id).value='');
+  state.filters = { enterprise:'', team:'', segment:'', cs:'', ob:'' };
+  ['fltEnterprise','fltTeam','fltSegment','fltCS','fltOB'].forEach(function (id) {
+    document.getElementById(id).value = '';
+  });
   applyFilters();
 }
 
 function renderSummary() {
   const s = summaryMetrics(state.filtered);
-  const daily = dailyImageCounts(state.filtered);
-  document.getElementById('m-images').textContent = fmt(s.total_images);
-  document.getElementById('m-images-sub').textContent = `${fmt(state.filtered.length)} total rows`;
   document.getElementById('m-skus').textContent = fmt(s.total_skus);
+  document.getElementById('m-images').textContent = fmt(s.total_images);
+  document.getElementById('m-images-sub').textContent = 'across ' + fmt(s.total_skus) + ' SKUs';
+  document.getElementById('m-avg-images').textContent = s.avg_images_per_sku.toFixed(1);
+  document.getElementById('m-avg-sub').textContent = 'images per SKU';
   document.getElementById('m-ent').textContent = s.total_enterprises;
-  document.getElementById('m-ent-sub').textContent = `${s.total_teams} active teams`;
+  document.getElementById('m-ent-sub').textContent = s.total_teams + ' teams';
   document.getElementById('m-teams').textContent = s.total_teams;
-  document.getElementById('m-rate').textContent = s.completion_rate.toFixed(1)+'%';
-  const avg = Math.round(s.total_images / Math.max(daily.length,1));
-  document.getElementById('m-avg').textContent = fmt(avg);
-  document.getElementById('m-avg-sub').textContent = `over ${daily.length} days`;
+  if (s.min_date && s.max_date) {
+    document.getElementById('m-span').textContent = shortDate(s.min_date) + ' → ' + shortDate(s.max_date);
+    document.getElementById('m-span-sub').textContent = 'first → last SKU';
+  } else {
+    document.getElementById('m-span').textContent = '—';
+  }
 }
 
 function renderDailyChart() {
-  const { days, statuses, matrix } = dailyByStatus(state.filtered);
-  const labels = days.map(shortDate);
-  const datasets = statuses.map((s, i) => ({
-    label: s.replace('_',' '),
-    data: matrix[s],
-    backgroundColor: STATUS_COLORS[s] || PALETTE[i],
-    borderColor: STATUS_COLORS[s] || PALETTE[i],
-    borderWidth: 0,
-  }));
+  const data = dailySkuCounts(state.filtered);
+  const labels = data.map(function (d) { return shortDate(d.date); });
   document.getElementById('dailyTotal').textContent = fmt(state.filtered.length);
 
   if (charts.daily) charts.daily.destroy();
   charts.daily = new Chart(document.getElementById('dailyChart'), {
-    type: 'bar',
-    data: { labels, datasets },
+    data: {
+      labels: labels,
+      datasets: [
+        { type: 'bar', label: 'New SKUs', data: data.map(function (d) { return d.skus; }), backgroundColor: '#ff5b14', borderWidth: 0, yAxisID: 'y' },
+        { type: 'line', label: 'Images', data: data.map(function (d) { return d.images; }), borderColor: '#0e6ba8', backgroundColor: 'rgba(14,107,168,0.1)', borderWidth: 2, fill: false, tension: 0.3, pointRadius: 0, pointHoverRadius: 5, yAxisID: 'y1' },
+      ]
+    },
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { intersect: false, mode: 'index' },
       plugins: {
-        legend: {
-          position: 'top', align: 'end',
-          labels: { font: {family:'JetBrains Mono',size:11}, color:'#46453d', boxWidth:10, boxHeight:10, padding:12 }
-        },
+        legend: { position:'top', align:'end', labels: { font:{family:'JetBrains Mono',size:11}, color:'#46453d', boxWidth:10, boxHeight:10, padding:12 } },
         tooltip: { backgroundColor:'#0e0e0c', titleColor:'#f6f6f4', bodyColor:'#f6f6f4', titleFont:{family:'JetBrains Mono',size:11}, bodyFont:{family:'JetBrains Mono',size:11}, padding:10 }
       },
       scales: {
-        x: { stacked:true, grid:{display:false}, border:{color:'#e1e0d8'}, ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:10},maxRotation:0,autoSkipPadding:20} },
-        y: { stacked:true, grid:{color:'#e1e0d8'}, border:{display:false}, ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:11}} }
+        x: { grid:{display:false}, border:{color:'#e1e0d8'}, ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:10},maxRotation:0,autoSkipPadding:20} },
+        y: { position:'left', grid:{color:'#e1e0d8'}, border:{display:false}, ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:11}}, title:{display:true,text:'SKUs',color:'#ff5b14',font:{family:'JetBrains Mono',size:10}} },
+        y1: { position:'right', grid:{display:false}, border:{display:false}, ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:11}}, title:{display:true,text:'Images',color:'#0e6ba8',font:{family:'JetBrains Mono',size:10}} },
       }
     }
   });
 }
 
-function renderSkuChart() {
-  const data = dailySkuCounts(state.filtered);
-  const labels = data.map(d=>shortDate(d.date));
-  const counts = data.map(d=>d.count);
-  if (charts.sku) charts.sku.destroy();
-  charts.sku = new Chart(document.getElementById('skuDailyChart'), {
-    type: 'line',
-    data: { labels, datasets: [{ data:counts, borderColor:'#0e6ba8', backgroundColor:'rgba(14,107,168,0.15)', fill:true, tension:.35, borderWidth:2, pointRadius:0, pointHoverRadius:5 }]},
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#0e0e0c',titleColor:'#f6f6f4',bodyColor:'#f6f6f4',titleFont:{family:'JetBrains Mono',size:11},bodyFont:{family:'JetBrains Mono',size:11},padding:10, callbacks:{label:ctx=>`${fmt(ctx.parsed.y)} SKUs`}} },
-      scales:{
-        x:{grid:{display:false},border:{color:'#e1e0d8'},ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:10},maxRotation:0,autoSkipPadding:20}},
-        y:{grid:{color:'#e1e0d8'},border:{display:false},ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:11}}}
-      }
-    }
-  });
-}
-
-function renderHourlyChart() {
-  const arr = hourlyDistribution(state.filtered);
-  const labels = arr.map((_,i)=>String(i).padStart(2,'0'));
-  if (charts.hourly) charts.hourly.destroy();
-  charts.hourly = new Chart(document.getElementById('hourlyChart'), {
-    type: 'bar',
-    data: { labels, datasets: [{ data:arr, backgroundColor:'#ff5b14', borderWidth:0 }]},
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#0e0e0c',titleColor:'#f6f6f4',bodyColor:'#f6f6f4',titleFont:{family:'JetBrains Mono',size:11},bodyFont:{family:'JetBrains Mono',size:11},padding:10, callbacks:{title:items=>`${items[0].label}:00`,label:ctx=>`${fmt(ctx.parsed.y)} images`}} },
-      scales:{
-        x:{grid:{display:false},border:{color:'#e1e0d8'},ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:10}}},
-        y:{grid:{color:'#e1e0d8'},border:{display:false},ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:11}}}
-      }
-    }
-  });
-}
-
-function renderStatusDonut() {
-  const data = statusBreakdown(state.filtered);
-  const total = data.reduce((s,d)=>s+d.count,0);
-  const completed = data.find(d=>d.status==='completed')?.count || 0;
-  const rate = total ? (completed/total)*100 : 0;
-  document.getElementById('donutRate').textContent = Math.round(rate)+'%';
-
-  if (charts.donut) charts.donut.destroy();
-  charts.donut = new Chart(document.getElementById('donutChart'), {
-    type: 'doughnut',
-    data: { labels: data.map(d=>d.status), datasets:[{ data: data.map(d=>d.count), backgroundColor: data.map(d=>STATUS_COLORS[d.status]||'#aeada0'), borderWidth:2, borderColor:'#ffffff' }]},
-    options: { cutout:'68%', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#0e0e0c',titleColor:'#f6f6f4',bodyColor:'#f6f6f4',titleFont:{family:'JetBrains Mono',size:11},bodyFont:{family:'JetBrains Mono',size:11},padding:10, callbacks:{label:ctx=>`${ctx.label}: ${fmt(ctx.parsed)}`}} }
-    }
-  });
-
-  document.getElementById('statusLegend').innerHTML = data.map(d=>`
-    <div class="item"><span class="swatch" style="background:${STATUS_COLORS[d.status]||'#aeada0'}"></span><span class="label">${d.status.replace('_',' ')}</span><span class="n">${fmt(d.count)}</span></div>
-  `).join('');
-}
-
-function renderCategoryChart() {
-  const data = categoryBreakdown(state.filtered);
-  if (charts.category) charts.category.destroy();
-  charts.category = new Chart(document.getElementById('categoryChart'), {
-    type: 'bar',
-    data: { labels: data.map(d=>d.category), datasets:[{ data: data.map(d=>d.count), backgroundColor: data.map((_,i)=>PALETTE[i%PALETTE.length]), borderWidth:0 }]},
-    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#0e0e0c',titleColor:'#f6f6f4',bodyColor:'#f6f6f4',titleFont:{family:'JetBrains Mono',size:11},bodyFont:{family:'JetBrains Mono',size:11},padding:10} },
-      scales:{
-        x:{grid:{color:'#e1e0d8'},border:{display:false},ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:10}}},
-        y:{grid:{display:false},border:{color:'#e1e0d8'},ticks:{color:'#46453d',font:{family:'JetBrains Mono',size:11}}}
-      }
-    }
-  });
+function renderHistogram() {
+  const buckets = imagesPerSkuHistogram(state.filtered);
+  const max = Math.max.apply(null, buckets.map(function (b) { return b.count; }).concat([1]));
+  const total = buckets.reduce(function (s, b) { return s + b.count; }, 0);
+  document.getElementById('histoContainer').innerHTML = buckets.map(function (b) {
+    const pct = total ? ((b.count / total) * 100).toFixed(1) : '0';
+    return '<div class="histo-row">' +
+      '<span class="lbl">' + escapeHTML(b.label) + ' img</span>' +
+      '<div class="bar-wrap"><div class="bar" style="width:' + (b.count / max * 100) + '%"></div></div>' +
+      '<span class="n">' + fmt(b.count) + ' <span style="color:var(--ink-500)">(' + pct + '%)</span></span>' +
+      '</div>';
+  }).join('');
 }
 
 function renderSegmentChart() {
@@ -897,20 +685,21 @@ function renderSegmentChart() {
   charts.segment = new Chart(document.getElementById('segmentChart'), {
     type: 'bar',
     data: {
-      labels: data.map(d=>d.segment),
+      labels: data.map(function (d) { return d.segment; }),
       datasets: [
-        { label:'Images', data: data.map(d=>d.images), backgroundColor:'#ff5b14', borderWidth:0 },
-        { label:'SKUs', data: data.map(d=>d.skus), backgroundColor:'#0e6ba8', borderWidth:0 },
+        { label: 'SKUs', data: data.map(function (d) { return d.skus; }), backgroundColor: '#ff5b14', borderWidth: 0 },
+        { label: 'Images', data: data.map(function (d) { return d.images; }), backgroundColor: '#0e6ba8', borderWidth: 0 },
       ]
     },
-    options: { responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'top', align:'end', labels:{font:{family:'JetBrains Mono',size:11},color:'#46453d',boxWidth:10,boxHeight:10,padding:12} },
-        tooltip:{backgroundColor:'#0e0e0c',titleColor:'#f6f6f4',bodyColor:'#f6f6f4',titleFont:{family:'JetBrains Mono',size:11},bodyFont:{family:'JetBrains Mono',size:11},padding:10}
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position:'top', align:'end', labels:{font:{family:'JetBrains Mono',size:11},color:'#46453d',boxWidth:10,boxHeight:10,padding:12} },
+        tooltip: { backgroundColor:'#0e0e0c', titleColor:'#f6f6f4', bodyColor:'#f6f6f4', padding:10, titleFont:{family:'JetBrains Mono',size:11}, bodyFont:{family:'JetBrains Mono',size:11} }
       },
-      scales:{
-        x:{grid:{display:false},border:{color:'#e1e0d8'},ticks:{color:'#46453d',font:{family:'JetBrains Mono',size:11}}},
-        y:{grid:{color:'#e1e0d8'},border:{display:false},ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:11}}}
+      scales: {
+        x: { grid:{display:false}, border:{color:'#e1e0d8'}, ticks:{color:'#46453d',font:{family:'JetBrains Mono',size:11}} },
+        y: { grid:{color:'#e1e0d8'}, border:{display:false}, ticks:{color:'#6e6d5e',font:{family:'JetBrains Mono',size:11}} },
       }
     }
   });
@@ -918,31 +707,30 @@ function renderSegmentChart() {
 
 function renderEnterpriseTable() {
   const view = state.entView;
-  const data = view === 'enterprise' ? enterpriseOnlyAggregates(state.filtered) : enterpriseTeamAggregates(state.filtered);
-  const max = Math.max(...data.map(d=>d.image_count),1);
-  document.getElementById('entSub').textContent = view === 'enterprise' ? 'Distinct images, SKUs, and teams per enterprise' : 'Distinct images and SKUs per enterprise + team';
+  const data = view === 'enterprise' ? enterpriseAggregates(state.filtered) : enterpriseTeamAggregates(state.filtered);
+  const max = Math.max.apply(null, data.map(function (d) { return d.image_count; }).concat([1]));
+  document.getElementById('entSub').textContent = view === 'enterprise' ? 'SKUs and images per enterprise' : 'SKUs and images per enterprise + team';
 
   const thead = document.getElementById('entThead');
   thead.innerHTML = view === 'team'
-    ? '<th>Enterprise</th><th>Team</th><th>Segment</th><th class="num">Images</th><th class="num">SKUs</th><th class="num">Done</th><th class="num">Rej</th><th style="width:15%">Share</th>'
-    : '<th>Enterprise</th><th>Segment</th><th class="num">Images</th><th class="num">SKUs</th><th class="num">Teams</th><th class="num">Done</th><th class="num">Rej</th><th style="width:15%">Share</th>';
+    ? '<th>Enterprise</th><th>Team</th><th>Segment</th><th class="num">SKUs</th><th class="num">Images</th><th class="num">Avg</th><th style="width:18%">Share</th>'
+    : '<th>Enterprise</th><th>Segment</th><th class="num">SKUs</th><th class="num">Images</th><th class="num">Teams</th><th class="num">Avg</th><th style="width:18%">Share</th>';
 
-  const tbody = document.getElementById('entTbody');
-  tbody.innerHTML = data.map(r => {
-    const share = (r.image_count/max)*100;
-    const teamCol = view === 'team' ? `<td class="mono">${escapeHTML(r.team_name)}</td>` : '';
-    const teamsCol = view === 'enterprise' ? `<td class="num">${fmt(r.team_count||0)}</td>` : '';
-    return `<tr>
-      <td style="color:var(--ink-900)">${escapeHTML(r.enterprise_name)}</td>
-      ${teamCol}
-      <td><span class="segment-pill">${escapeHTML(r.customer_segment)}</span></td>
-      <td class="num" style="color:var(--ink-900)">${fmt(r.image_count)}</td>
-      <td class="num" style="color:var(--ink-700)">${fmt(r.sku_count)}</td>
-      ${teamsCol}
-      <td class="num" style="color:#2f7d4f">${fmt(r.completed)}</td>
-      <td class="num" style="color:#c2410c">${fmt(r.rejected)}</td>
-      <td><div class="share-bar"><span style="width:${share}%"></span></div></td>
-    </tr>`;
+  document.getElementById('entTbody').innerHTML = data.map(function (r) {
+    const share = (r.image_count / max) * 100;
+    const avg = r.sku_count ? (r.image_count / r.sku_count).toFixed(1) : '0';
+    const teamCol = view === 'team' ? '<td class="mono">' + escapeHTML(r.team_name) + '</td>' : '';
+    const teamsCol = view === 'enterprise' ? '<td class="num">' + fmt(r.team_count || 0) + '</td>' : '';
+    return '<tr>' +
+      '<td style="color:var(--ink-900)">' + escapeHTML(r.enterprise_name) + '</td>' +
+      teamCol +
+      '<td><span class="segment-pill">' + escapeHTML(r.customer_segment) + '</span></td>' +
+      '<td class="num" style="color:var(--ink-700)">' + fmt(r.sku_count) + '</td>' +
+      '<td class="num" style="color:var(--ink-900)">' + fmt(r.image_count) + '</td>' +
+      teamsCol +
+      '<td class="num">' + avg + '</td>' +
+      '<td><div class="share-bar"><span style="width:' + share + '%"></span></div></td>' +
+    '</tr>';
   }).join('');
 
   document.getElementById('btnEnt').classList.toggle('active', view === 'enterprise');
@@ -951,95 +739,87 @@ function renderEnterpriseTable() {
 
 function setEntView(v) { state.entView = v; renderEnterpriseTable(); }
 
+function renderTopSkus() {
+  const data = topSkus(state.filtered, 30);
+  document.getElementById('topSkusBody').innerHTML = data.map(function (r) {
+    return '<tr><td class="mono" style="font-size:11px">' + escapeHTML(r.ai_sku_id) + '<br><span style="color:var(--ink-500);font-size:10px">' + escapeHTML(r.enterprise_name) + '</span></td><td class="num" style="color:var(--ink-900)">' + fmt(r.distinct_image_count) + '</td></tr>';
+  }).join('');
+}
+
 function renderTeamTable() {
   const data = enterpriseTeamAggregates(state.filtered);
   document.getElementById('teamsTotal').textContent = fmt(data.length);
-  document.getElementById('teamThead').innerHTML = '<th>Enterprise</th><th>Team</th><th>Segment</th><th class="num">Images</th><th class="num">SKUs</th><th class="num">Done</th><th class="num">Rej</th><th>CS POC</th><th>OB POC</th>';
-  document.getElementById('teamTbody').innerHTML = data.map(r => `
-    <tr>
-      <td style="color:var(--ink-900)">${escapeHTML(r.enterprise_name)}</td>
-      <td class="mono">${escapeHTML(r.team_name)}</td>
-      <td><span class="segment-pill">${escapeHTML(r.customer_segment)}</span></td>
-      <td class="num" style="color:var(--ink-900)">${fmt(r.image_count)}</td>
-      <td class="num" style="color:var(--ink-700)">${fmt(r.sku_count)}</td>
-      <td class="num" style="color:#2f7d4f">${fmt(r.completed)}</td>
-      <td class="num" style="color:#c2410c">${fmt(r.rejected)}</td>
-      <td class="mono" style="font-size:11px">${r.cs_pocs.map(escapeHTML).join('<br>')}</td>
-      <td class="mono" style="font-size:11px">${r.ob_pocs.map(escapeHTML).join('<br>')}</td>
-    </tr>
-  `).join('');
-}
-
-function renderRejections() {
-  const data = rejectionReasons(state.filtered);
-  const max = Math.max(...data.map(d=>d.count),1);
-  const total = data.reduce((s,d)=>s+d.count,0);
-  document.getElementById('rejectionsList').innerHTML = data.length ? data.map(r => `
-    <div style="margin-bottom:10px">
-      <div class="list-row"><span class="r">${escapeHTML(r.reason)}</span><span class="n">${r.count} <span style="color:var(--ink-500)">(${((r.count/total)*100).toFixed(0)}%)</span></span></div>
-      <div class="share-bar" style="margin-top:4px"><span style="width:${(r.count/max)*100}%;background:var(--negative)"></span></div>
-    </div>
-  `).join('') : '<div style="font-size:12px;color:var(--ink-500)">No rejections in current view</div>';
+  document.getElementById('teamThead').innerHTML = '<th>Enterprise</th><th>Team</th><th>Segment</th><th class="num">SKUs</th><th class="num">Images</th><th class="num">Avg/SKU</th><th>CS POC</th><th>OB POC</th>';
+  document.getElementById('teamTbody').innerHTML = data.map(function (r) {
+    const avg = r.sku_count ? (r.image_count / r.sku_count).toFixed(1) : '0';
+    return '<tr>' +
+      '<td style="color:var(--ink-900)">' + escapeHTML(r.enterprise_name) + '</td>' +
+      '<td class="mono">' + escapeHTML(r.team_name) + '</td>' +
+      '<td><span class="segment-pill">' + escapeHTML(r.customer_segment) + '</span></td>' +
+      '<td class="num" style="color:var(--ink-700)">' + fmt(r.sku_count) + '</td>' +
+      '<td class="num" style="color:var(--ink-900)">' + fmt(r.image_count) + '</td>' +
+      '<td class="num">' + avg + '</td>' +
+      '<td class="mono" style="font-size:11px">' + r.cs_pocs.map(escapeHTML).join('<br>') + '</td>' +
+      '<td class="mono" style="font-size:11px">' + r.ob_pocs.map(escapeHTML).join('<br>') + '</td>' +
+    '</tr>';
+  }).join('');
 }
 
 function renderPOCList(containerId, data) {
-  const el = document.getElementById(containerId);
-  el.innerHTML = data.map((poc, idx) => `
-    <div class="poc-row" data-idx="${idx}" data-container="${containerId}">
-      <button class="poc-toggle" onclick="togglePoc('${containerId}',${idx})">
-        <div class="email">
-          <div class="e">${escapeHTML(poc.email)}</div>
-          <div class="m">${poc.total_enterprises} enterprise${poc.total_enterprises!==1?'s':''} · ${poc.enterprises.length} team assignment${poc.enterprises.length!==1?'s':''} · ${fmt(poc.total_skus)} SKUs</div>
-        </div>
-        <div class="count"><div class="n">${fmt(poc.total_images)}</div><div class="l">images</div></div>
-        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-      <div class="poc-detail">
-        ${poc.enterprises.map(e=>`
-          <div class="poc-detail-item">
-            <div class="names"><span class="ent">${escapeHTML(e.enterprise_name)}</span><span class="team">/ ${escapeHTML(e.team_name)}</span></div>
-            <span class="n">${fmt(e.image_count)} img · ${fmt(e.sku_count)} sku</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `).join('') || '<div style="padding:24px;font-size:12px;color:var(--ink-500)">No POCs in current view</div>';
+  document.getElementById(containerId).innerHTML = data.length ? data.map(function (poc, idx) {
+    return '<div class="poc-row" data-idx="' + idx + '" data-container="' + containerId + '">' +
+      '<button class="poc-toggle" onclick="togglePoc(\'' + containerId + '\',' + idx + ')">' +
+        '<div class="email">' +
+          '<div class="e">' + escapeHTML(poc.email) + '</div>' +
+          '<div class="m">' + poc.total_enterprises + ' enterprise' + (poc.total_enterprises !== 1 ? 's' : '') + ' · ' + poc.enterprises.length + ' team assignment' + (poc.enterprises.length !== 1 ? 's' : '') + ' · ' + fmt(poc.total_skus) + ' SKUs</div>' +
+        '</div>' +
+        '<div class="count"><div class="n">' + fmt(poc.total_images) + '</div><div class="l">images</div></div>' +
+        '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>' +
+      '</button>' +
+      '<div class="poc-detail">' +
+        poc.enterprises.map(function (e) {
+          return '<div class="poc-detail-item">' +
+            '<div class="names"><span class="ent">' + escapeHTML(e.enterprise_name) + '</span><span class="team">/ ' + escapeHTML(e.team_name) + '</span></div>' +
+            '<span class="n">' + fmt(e.sku_count) + ' SKUs · ' + fmt(e.image_count) + ' img</span>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }).join('') : '<div style="padding:24px;font-size:12px;color:var(--ink-500)">No POCs in current view</div>';
 }
 
 function togglePoc(container, idx) {
-  const el = document.querySelector(`#${container} .poc-row[data-idx="${idx}"]`);
+  const el = document.querySelector('#' + container + ' .poc-row[data-idx="' + idx + '"]');
   if (el) el.classList.toggle('open');
 }
 
-/* All image rows table */
+/* All rows table */
 function getFilteredRows() {
   let rows = state.filtered;
   if (state.rowSearch) {
     const q = state.rowSearch;
-    rows = rows.filter(r => {
-      // Search across every column — normalized and raw — so nothing is hidden.
+    rows = rows.filter(function (r) {
       if (r.__raw) {
         for (const k in r.__raw) {
-          if (String(r.__raw[k] ?? '').toLowerCase().includes(q)) return true;
+          if (String(r.__raw[k] || '').toLowerCase().indexOf(q) !== -1) return true;
         }
-      }
-      for (const k in r) {
-        if (k === '__raw') continue;
-        if (String(r[k] ?? '').toLowerCase().includes(q)) return true;
       }
       return false;
     });
   }
-  const { col, dir, fromRaw } = state.rowSort;
-  rows = [...rows].sort((a,b) => {
+  const sort = state.rowSort;
+  rows = rows.slice().sort(function (a, b) {
     let av, bv;
-    if (fromRaw && a.__raw && b.__raw) { av = a.__raw[col]; bv = b.__raw[col]; }
-    else { av = a[col]; bv = b[col]; }
+    if (sort.fromRaw && a.__raw && b.__raw) { av = a.__raw[sort.col]; bv = b.__raw[sort.col]; }
+    else { av = a[sort.col]; bv = b[sort.col]; }
     if (av == null) av = '';
     if (bv == null) bv = '';
-    if (typeof av === 'string') { av = av.toLowerCase(); bv = String(bv).toLowerCase(); }
-    if (av < bv) return dir === 'asc' ? -1 : 1;
-    if (av > bv) return dir === 'asc' ? 1 : -1;
+    if (typeof av === 'number' && typeof bv === 'number') {
+      return sort.dir === 'asc' ? av - bv : bv - av;
+    }
+    av = String(av).toLowerCase(); bv = String(bv).toLowerCase();
+    if (av < bv) return sort.dir === 'asc' ? -1 : 1;
+    if (av > bv) return sort.dir === 'asc' ? 1 : -1;
     return 0;
   });
   return rows;
@@ -1053,69 +833,47 @@ function renderRowsTable() {
   const startIdx = (state.rowPage - 1) * state.rowsPerPage;
   const slice = rows.slice(startIdx, startIdx + state.rowsPerPage);
 
-  // Build column list directly from Metabase response — show every original column,
-  // preserving exact names (ai.image_id, etc). Falls back to normalized keys if no __raw.
   const rawSample = rows.length && rows[0].__raw ? rows[0].__raw : null;
   const cols = rawSample
-    ? Object.keys(rawSample).map(k => ({ key: k, label: k, fromRaw: true }))
+    ? Object.keys(rawSample).map(function (k) { return { key: k, label: k, fromRaw: true }; })
     : [
-        {key:'created_on', label:'created_on'},
-        {key:'ai_image_id', label:'ai.image_id'},
-        {key:'sku_id', label:'sku_id'},
-        {key:'image_category', label:'image_category'},
-        {key:'status', label:'status'},
-        {key:'enterprise_name', label:'enterprise_name'},
-        {key:'etd_team_name', label:'etd.team_name'},
-        {key:'customer_segment', label:'customer-segment'},
-        {key:'cs_poc_email', label:'cs_poc_email'},
-        {key:'ob_poc_email', label:'ob_poc_email'},
-        {key:'ai_enterprise_id', label:'ai.enterprise_id'},
-        {key:'ai_team_id', label:'ai.team_id'},
-        {key:'rejected_comment', label:'rejected_comment'},
+        { key:'first_image_created_on', label:'first_image_created_on' },
+        { key:'ai_sku_id', label:'ai.sku_id' },
+        { key:'distinct_image_count', label:'distinct_image_count' },
+        { key:'enterprise_name', label:'enterprise_name' },
+        { key:'etd_team_name', label:'etd.team_name' },
+        { key:'customer_segment', label:'customer_segment' },
+        { key:'cs_poc_email', label:'cs_poc_email' },
+        { key:'ob_poc_email', label:'ob_poc_email' },
+        { key:'ai_enterprise_id', label:'ai.enterprise_id' },
+        { key:'ai_team_id', label:'ai.team_id' },
       ];
 
-  document.getElementById('rowsThead').innerHTML = cols.map(c => {
+  document.getElementById('rowsThead').innerHTML = cols.map(function (c) {
     const active = state.rowSort.col === c.key;
     const arrow = active ? (state.rowSort.dir === 'asc' ? '↑' : '↓') : '↕';
     const safeKey = c.key.replace(/'/g, "\\'");
-    return `<th class="sortable ${active?'active':''}" onclick="sortRows('${safeKey}', ${c.fromRaw?'true':'false'})">${escapeHTML(c.label)}<span class="arrow">${arrow}</span></th>`;
+    return '<th class="sortable ' + (active ? 'active' : '') + '" onclick="sortRows(\'' + safeKey + '\',' + (c.fromRaw ? 'true' : 'false') + ')">' + escapeHTML(c.label) + '<span class="arrow">' + arrow + '</span></th>';
   }).join('');
 
-  document.getElementById('rowsTbody').innerHTML = slice.map(r => {
-    return '<tr>' + cols.map(c => {
+  document.getElementById('rowsTbody').innerHTML = slice.map(function (r) {
+    return '<tr>' + cols.map(function (c) {
       let v = c.fromRaw ? (r.__raw ? r.__raw[c.key] : r[c.key]) : r[c.key];
       if (v === null || v === undefined || v === '') return '<td class="mono" style="color:var(--ink-300)">—</td>';
       const s = String(v);
-      // Special formatting for known semantic columns
-      if (c.label === 'status' || c.key === 'status') {
-        return `<td><span class="status-badge status-${s}">${escapeHTML(s.replace('_',' '))}</span></td>`;
-      }
-      if (c.label === 'customer-segment' || c.key === 'customer_segment') {
-        return `<td><span class="segment-pill">${escapeHTML(s)}</span></td>`;
-      }
-      if (c.label === 'created_on' || c.key === 'created_on') {
-        return `<td class="mono" style="white-space:nowrap">${escapeHTML(formatDateSafe(s))}</td>`;
-      }
-      if (c.label === 'rejected_comment' || c.key === 'rejected_comment') {
-        return `<td class="rejected-cell">${escapeHTML(s)}</td>`;
-      }
-      return `<td class="mono" style="font-size:11px">${escapeHTML(s)}</td>`;
+      if (c.key === 'customer_segment' || c.label === 'customer_segment') return '<td><span class="segment-pill">' + escapeHTML(s) + '</span></td>';
+      if (c.key === 'first_image_created_on' || c.label === 'first_image_created_on') return '<td class="mono" style="white-space:nowrap">' + escapeHTML(formatDateSafe(s)) + '</td>';
+      if (c.key === 'distinct_image_count' || c.label === 'distinct_image_count') return '<td class="num" style="color:var(--ink-900)">' + fmt(s) + '</td>';
+      return '<td class="mono" style="font-size:11px">' + escapeHTML(s) + '</td>';
     }).join('') + '</tr>';
   }).join('');
 
   document.getElementById('pgNum').textContent = state.rowPage;
   document.getElementById('pgTotal').textContent = totalPages;
-  document.getElementById('pgRange').textContent = rows.length ? `${startIdx+1}–${Math.min(startIdx+state.rowsPerPage, rows.length)}` : '0';
+  document.getElementById('pgRange').textContent = rows.length ? (startIdx + 1) + '–' + Math.min(startIdx + state.rowsPerPage, rows.length) : '0';
   document.getElementById('pgAll').textContent = fmt(rows.length);
   document.getElementById('pgPrev').disabled = state.rowPage <= 1;
   document.getElementById('pgNext').disabled = state.rowPage >= totalPages;
-}
-
-function formatDateSafe(s) {
-  if (!s) return '';
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return s; // leave untouched if it's not parseable as a date
-  return d.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
 }
 
 function sortRows(col, fromRaw) {
@@ -1134,21 +892,21 @@ function changePage(d) {
 function exportCSV() {
   const rows = getFilteredRows();
   if (!rows.length) return;
-  // Use raw columns from Metabase verbatim if available; fall back to normalized keys.
   const cols = rows[0].__raw
     ? Object.keys(rows[0].__raw)
-    : ['ai_enterprise_id','enterprise_name','ai_team_id','etd_team_name','customer_segment','cs_poc_email','ob_poc_email','ai_image_id','sku_id','image_category','status','rejected_comment','created_on'];
-  const csv = [cols.join(',')].concat(
-    rows.map(r => cols.map(c => {
+    : ['ai_enterprise_id','enterprise_name','ai_team_id','etd_team_name','customer_segment','cs_poc_email','ob_poc_email','ai_sku_id','distinct_image_count','first_image_created_on'];
+  const csv = [cols.join(',')].concat(rows.map(function (r) {
+    return cols.map(function (c) {
       const src = r.__raw || r;
       const v = src[c] == null ? '' : String(src[c]);
-      return /[",\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v;
-    }).join(','))
-  ).join('\n');
-  const blob = new Blob([csv], { type:'text/csv' });
+      return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+    }).join(',');
+  })).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `production_analytics_${new Date().toISOString().slice(0,10)}.csv`;
+  a.href = url;
+  a.download = 'sku_analytics_' + new Date().toISOString().slice(0,10) + '.csv';
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -1156,19 +914,17 @@ function exportCSV() {
 function renderAll() {
   renderSummary();
   renderDailyChart();
-  renderSkuChart();
-  renderHourlyChart();
-  renderStatusDonut();
-  renderCategoryChart();
+  renderHistogram();
   renderSegmentChart();
   renderEnterpriseTable();
+  renderTopSkus();
   renderTeamTable();
-  renderRejections();
   renderPOCList('csList', pocAggregates(state.filtered, 'CS'));
   renderPOCList('obList', pocAggregates(state.filtered, 'OB'));
   renderRowsTable();
 }
 
+/* Init with cache-first */
 function setBanner(state, html) {
   const el = document.getElementById('dataBanner');
   if (!el) return;
@@ -1198,67 +954,48 @@ function applyRows(rows) {
 
 async function refreshFromMetabase(useCache) {
   const t0 = performance.now();
-  setBanner('loading',
-    '<strong>Fetching fresh data from Metabase…</strong> This can take 30–60 seconds for the first request.' +
-    (useCache ? ' Showing cached data below in the meantime.' : '')
-  );
+  setBanner('loading', '<strong>Fetching from Metabase…</strong> Can take 30–60 seconds.' + (useCache ? ' Cached data is shown below in the meantime.' : ''));
   try {
     const rows = await fetchData();
     const ms = Math.round(performance.now() - t0);
     saveCache(rows);
     applyRows(rows);
     setBanner('success',
-      '<strong>Fresh data loaded</strong> · ' + fmt(rows.length) + ' rows in ' + (ms/1000).toFixed(1) + 's · ' +
-      'showing first 2000 rows · cached locally · <a href="#" onclick="forceRefresh();return false;">refresh now</a>'
+      '<strong>Fresh data loaded</strong> · ' + fmt(rows.length) + ' SKU rows in ' + (ms/1000).toFixed(1) + 's · cached locally · ' +
+      '<a href="#" onclick="forceRefresh();return false;">refresh now</a>'
     );
   } catch (err) {
     console.error('Refresh failed:', err);
     let diagHtml = '';
     if (err.diagnostic && err.diagnostic.attempts) {
-      diagHtml = '<br><br><strong>Diagnostic — URLs tried:</strong>' +
-        err.diagnostic.attempts.map(function (a) {
-          return '<pre>URL: ' + escapeHTML(a.url) +
-            '\nStatus: ' + a.status + ' · isArray: ' + a.isArray + ' · isMetabaseShape: ' + (a.hasMetabaseShape||false) +
-            '\nContent-Type: ' + (a.contentType || '—') +
-            (a.error ? '\nError: ' + escapeHTML(a.error) : '') +
-            (a.bodyPreview ? '\nBody preview: ' + escapeHTML(a.bodyPreview.slice(0,400)) : '') +
-            '</pre>';
-        }).join('');
+      diagHtml = '<br><br><strong>Diagnostic:</strong>' + err.diagnostic.attempts.map(function (a) {
+        return '<pre>URL: ' + escapeHTML(a.url) + '\nStatus: ' + a.status + '\nContent-Type: ' + (a.contentType || '—') + (a.error ? '\nError: ' + escapeHTML(a.error) : '') + (a.bodyPreview ? '\nBody: ' + escapeHTML(a.bodyPreview.slice(0,300)) : '') + '</pre>';
+      }).join('');
     }
     setBanner('error',
-      '<strong>Could not refresh data</strong>' +
-      '<br>Error: ' + escapeHTML(String(err.message || err)) +
-      (useCache ? '<br>Showing previously cached data below. Click <a href="#" onclick="forceRefresh();return false;">retry</a>.' : '') +
+      '<strong>Could not refresh data</strong><br>Error: ' + escapeHTML(String(err.message || err)) +
+      (useCache ? '<br>Showing cached data below. Click <a href="#" onclick="forceRefresh();return false;">retry</a>.' : '') +
       diagHtml +
-      '<br><br>Test the proxy directly: <a href="/api/data" target="_blank">/api/data</a>'
+      '<br><br>Test: <a href="/api/data" target="_blank">/api/data</a>'
     );
   }
 }
 
-function forceRefresh() {
-  clearCache();
-  refreshFromMetabase(false);
-}
+function forceRefresh() { clearCache(); refreshFromMetabase(false); }
 
 async function init() {
   document.getElementById('lastUpdated').textContent = nowStamp();
-
   const cached = loadCache();
   if (cached && cached.rows && cached.rows.length) {
-    // Show cached data IMMEDIATELY so the dashboard never looks empty
     applyRows(cached.rows);
     const isStale = (Date.now() - cached.fetchedAt) > CACHE_TTL_MS;
     setBanner(isStale ? 'loading' : 'success',
       '<strong>' + (isStale ? 'Showing cached data (stale)' : 'Showing cached data') + '</strong> · ' +
-      fmt(cached.rows.length) + ' rows · fetched ' + timeAgo(cached.fetchedAt) + ' · ' +
+      fmt(cached.rows.length) + ' SKU rows · fetched ' + timeAgo(cached.fetchedAt) + ' · ' +
       '<a href="#" onclick="forceRefresh();return false;">refresh from Metabase</a>'
     );
-    // Background refresh if stale
-    if (isStale) {
-      refreshFromMetabase(true);
-    }
+    if (isStale) refreshFromMetabase(true);
   } else {
-    // No cache — must fetch now
     await refreshFromMetabase(false);
   }
 }
