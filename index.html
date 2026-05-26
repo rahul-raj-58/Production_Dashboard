@@ -440,7 +440,10 @@ footer{padding-top:32px;border-top:1px solid var(--line);display:flex;justify-co
 // Metabase public question UUID for question 12089
 const METABASE_BASE = 'https://metabase.spyne.ai';
 const METABASE_UUID = 'd5777560-dcd6-427f-a8c1-e745c4d24aa6';
-const METABASE_JSON_URL = `${METABASE_BASE}/api/public/card/${METABASE_UUID}/query/json`;
+
+// Calls our own Vercel proxy (/api/data) which forwards to Metabase server-side.
+// This avoids CORS and adds 60s edge caching for instant repeat loads.
+const METABASE_JSON_URL = '/api/data';
 
 function normalizeRow(raw) {
   // Preserve every column as-is from Metabase; only add safe fallback access
@@ -1124,13 +1127,15 @@ function setBanner(state, html) {
 
 async function init() {
   document.getElementById('lastUpdated').textContent = nowStamp();
-  setBanner('loading', '<strong>Loading data from Metabase…</strong><br>Fetching <a href="' + METABASE_JSON_URL + '" target="_blank">' + METABASE_JSON_URL + '</a>');
+  setBanner('loading', '<strong>Loading data…</strong> Fetching from Metabase via proxy.');
+  const t0 = performance.now();
   try {
     const rows = await fetchData();
+    const ms = Math.round(performance.now() - t0);
     state.allRows = rows;
     state.filtered = state.allRows.slice();
     setBanner('success',
-      '<strong>Connected to Metabase</strong> · ' + fmt(rows.length) + ' rows loaded · question 12089'
+      '<strong>Connected</strong> · ' + fmt(rows.length) + ' rows loaded in ' + ms + ' ms · question 12089 · cached for 60s'
     );
     populateFilters();
     bindFilters();
@@ -1139,21 +1144,13 @@ async function init() {
     renderAll();
   } catch (err) {
     console.error('Data load failed:', err);
-    const isCors = String(err).toLowerCase().includes('fetch') || String(err).toLowerCase().includes('network') || String(err).toLowerCase().includes('cors');
     setBanner('error',
-      '<strong>Could not load data from Metabase</strong>' +
+      '<strong>Could not load data</strong>' +
       '<br>Error: ' + escapeHTML(String(err.message || err)) +
-      (isCors
-        ? '<br><br>This is most likely a <strong>CORS restriction</strong> — the browser blocked the request because Metabase did not send an <code>Access-Control-Allow-Origin</code> header for this page\'s domain.<br><br>' +
-          'Fixes (any one will work):' +
-          '<ol>' +
-          '<li>Test the URL directly in a browser tab — it should return a JSON array. If it does but the dashboard still fails, the issue is CORS.</li>' +
-          '<li>Host the dashboard on the same domain as Metabase (a subpath of <code>metabase.spyne.ai</code>), or</li>' +
-          '<li>Add a tiny serverless proxy on Vercel that fetches the URL server-side and re-serves it with permissive CORS headers. Then change <code>METABASE_JSON_URL</code> at the top of the script to point to your proxy.</li>' +
-          '<li>Ask your Metabase admin to allow your dashboard\'s origin in the Metabase reverse-proxy / CORS config.</li>' +
-          '</ol>' +
-          'URL attempted:<pre>' + escapeHTML(METABASE_JSON_URL) + '</pre>'
-        : '<br><br>URL attempted:<pre>' + escapeHTML(METABASE_JSON_URL) + '</pre>')
+      '<br><br>' +
+      'Most likely the proxy <code>/api/data</code> is not deployed yet. Make sure your Vercel project contains <code>api/data.js</code> at the root.' +
+      '<br><br>Test the proxy directly: <a href="/api/data" target="_blank">/api/data</a>' +
+      '<br>Should return JSON. If it returns 404, redeploy. If 500, check Vercel logs.'
     );
   }
 }
