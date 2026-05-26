@@ -1,5 +1,6 @@
 // Vercel Serverless Function: /api/data
-// Robust version — never crashes the runtime, always returns JSON with details.
+// Maximum-compatibility version. Uses Promise chains instead of async/await
+// in the exported handler to avoid any runtime-specific quirks.
 
 const UUID = 'd5777560-dcd6-427f-a8c1-e745c4d24aa6';
 const BASE = 'https://metabase.spyne.ai';
@@ -8,38 +9,60 @@ const CANDIDATE_URLS = [
   BASE + '/api/public/card/' + UUID + '/query/json',
   BASE + '/api/public/card/' + UUID + '/query',
   BASE + '/public/question/' + UUID + '.json',
-  BASE + '/public/question/' + UUID + '/query/json',
 ];
 
-const COMMON_HEADERS = {
-  Accept: 'application/json, text/plain, */*',
-  'Accept-Language': 'en-US,en;q=0.9',
-  'User-Agent':
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+const HEADERS = {
+  'Accept': 'application/json, text/plain, */*',
+  'User-Agent': 'Mozilla/5.0 (compatible; SpyneAnalyticsProxy/1.0)'
 };
 
-async function safeFetch(url) {
-  const out = { url, status: 0, ok: false, contentType: '', isArray: false, hasMetabaseShape: false, parsed: null, bodyPreview: '', error: null };
+function jsonResponse(res, statusCode, obj) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.statusCode = statusCode;
   try {
-    const r = await fetch(url, { method: 'GET', headers: COMMON_HEADERS, redirect: 'follow' });
-    out.status = r.status;
-    out.ok = r.ok;
-    out.contentType = r.headers.get('content-type') || '';
-    let text = '';
-    try { text = await r.text(); } catch (e) { out.error = 'read body failed: ' + (e && e.message); return out; }
-    out.bodyPreview = text.slice(0, 500);
-    try {
-      const parsed = JSON.parse(text);
-      out.parsed = parsed;
-      out.isArray = Array.isArray(parsed);
-      out.hasMetabaseShape = !!(parsed && parsed.data && Array.isArray(parsed.data.rows));
-    } catch (e) {
-      // not JSON — leave parsed null, body preview already captured
-    }
+    res.end(JSON.stringify(obj));
   } catch (e) {
-    out.error = String(e && e.message ? e.message : e);
+    res.end('{"__proxy_error":true,"message":"stringify failed","detail":"' + String(e.message || e).replace(/"/g, "'") + '"}');
   }
-  return out;
+}
+
+function tryUrl(url) {
+  return fetch(url, { method: 'GET', headers: HEADERS, redirect: 'follow' })
+    .then(function (r) {
+      const status = r.status;
+      const ok = r.ok;
+      const contentType = r.headers.get('content-type') || '';
+      return r.text().then(function (text) {
+        let parsed = null;
+        let isArray = false;
+        let hasMetabaseShape = false;
+        try {
+          parsed = JSON.parse(text);
+          isArray = Array.isArray(parsed);
+          hasMetabaseShape = !!(parsed && parsed.data && Array.isArray(parsed.data.rows));
+        } catch (e) { /* not JSON */ }
+        return {
+          url: url, status: status, ok: ok, contentType: contentType,
+          isArray: isArray, hasMetabaseShape: hasMetabaseShape,
+          parsed: parsed, bodyPreview: text.slice(0, 500), error: null
+        };
+      }).catch(function (e) {
+        return {
+          url: url, status: status, ok: ok, contentType: contentType,
+          isArray: false, hasMetabaseShape: false, parsed: null, bodyPreview: '',
+          error: 'read body failed: ' + (e && e.message)
+        };
+      });
+    })
+    .catch(function (e) {
+      return {
+        url: url, status: 0, ok: false, contentType: '',
+        isArray: false, hasMetabaseShape: false, parsed: null, bodyPreview: '',
+        error: String(e && e.message ? e.message : e)
+      };
+    });
 }
 
 function metabaseShapeToRows(parsed) {
@@ -51,68 +74,72 @@ function metabaseShapeToRows(parsed) {
   });
 }
 
-module.exports = async function handler(req, res) {
-  // Catch ALL errors and always return a JSON 200 — never let the function crash.
-  try {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Content-Type', 'application/json');
+function tryAllUrls(index, attempts, onDone) {
+  if (index >= CANDIDATE_URLS.length) {
+    onDone({ success: false, attempts: attempts });
+    return;
+  }
+  tryUrl(CANDIDATE_URLS[index]).then(function (r) {
+    attempts.push({
+      url: r.url, status: r.status, ok: r.ok, contentType: r.contentType,
+      isArray: r.isArray, hasMetabaseShape: r.hasMetabaseShape,
+      bodyPreview: r.bodyPreview, error: r.error
+    });
+    if (r.ok && r.isArray) { onDone({ success: true, rows: r.parsed, attempts: attempts }); return; }
+    if (r.ok && r.hasMetabaseShape) {
+      try {
+        const rows = metabaseShapeToRows(r.parsed);
+        onDone({ success: true, rows: rows, attempts: attempts });
+        return;
+      } catch (e) {
+        attempts[attempts.length - 1].error = 'shape parse failed: ' + (e && e.message);
+      }
+    }
+    tryAllUrls(index + 1, attempts, onDone);
+  });
+}
 
+module.exports = function (req, res) {
+  try {
     if (req.method === 'OPTIONS') {
-      res.status(204).end();
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.statusCode = 204;
+      res.end();
       return;
     }
-
-    const attempts = [];
-    for (let i = 0; i < CANDIDATE_URLS.length; i++) {
-      const url = CANDIDATE_URLS[i];
-      const r = await safeFetch(url);
-      attempts.push({
-        url: r.url,
-        status: r.status,
-        ok: r.ok,
-        contentType: r.contentType,
-        isArray: r.isArray,
-        hasMetabaseShape: r.hasMetabaseShape,
-        bodyPreview: r.bodyPreview,
-        error: r.error,
-      });
-
-      if (r.ok && r.isArray) {
-        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
-        res.status(200).send(JSON.stringify(r.parsed));
-        return;
-      }
-      if (r.ok && r.hasMetabaseShape) {
-        try {
-          const rows = metabaseShapeToRows(r.parsed);
-          res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
-          res.status(200).send(JSON.stringify(rows));
-          return;
-        } catch (e) {
-          attempts[attempts.length - 1].error = 'shape parse failed: ' + (e && e.message);
-        }
-      }
-    }
-
-    res.status(200).send(JSON.stringify({
-      __proxy_error: true,
-      message: 'No candidate URL returned a usable JSON array',
-      attempts: attempts,
-    }));
-  } catch (outer) {
-    try {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Content-Type', 'application/json');
-      res.status(200).send(JSON.stringify({
+    if (typeof fetch !== 'function') {
+      jsonResponse(res, 200, {
         __proxy_error: true,
-        message: 'Proxy threw an uncaught exception',
-        detail: String(outer && outer.message ? outer.message : outer),
-        stack: outer && outer.stack ? String(outer.stack).slice(0, 1500) : null,
-      }));
-    } catch (_) {
-      // last resort
-      res.status(500).end('proxy fatal');
+        message: 'fetch is not available in this runtime',
+        nodeVersion: process.version,
+        hint: 'Update Vercel project Node.js version to 18 or newer in Project Settings.'
+      });
+      return;
     }
+    tryAllUrls(0, [], function (result) {
+      if (result.success) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.statusCode = 200;
+        res.end(JSON.stringify(result.rows));
+      } else {
+        jsonResponse(res, 200, {
+          __proxy_error: true,
+          message: 'No candidate URL returned a usable JSON array',
+          attempts: result.attempts,
+          nodeVersion: process.version
+        });
+      }
+    });
+  } catch (outer) {
+    jsonResponse(res, 200, {
+      __proxy_error: true,
+      message: 'Proxy threw an uncaught exception',
+      detail: String(outer && outer.message ? outer.message : outer),
+      stack: outer && outer.stack ? String(outer.stack).slice(0, 1500) : null,
+      nodeVersion: typeof process !== 'undefined' ? process.version : 'unknown'
+    });
   }
 };
