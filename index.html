@@ -324,6 +324,7 @@ function saveCache(rows) {
 function clearCache() { try { localStorage.removeItem(CACHE_KEY); } catch (e) {} }
 
 async function fetchWithTimeout(url, ms) {
+  // Kept for compat but no longer used by fetchData — we wait indefinitely now
   const ctrl = new AbortController();
   const t = setTimeout(function () { ctrl.abort(); }, ms);
   try { return await fetch(url, { method: 'GET', signal: ctrl.signal }); }
@@ -331,13 +332,10 @@ async function fetchWithTimeout(url, ms) {
 }
 
 async function fetchData() {
-  let res;
-  try { res = await fetchWithTimeout(METABASE_JSON_URL, 55000); }
-  catch (e) {
-    if (e.name === 'AbortError') throw new Error('Timed out after 55 seconds');
-    throw e;
-  }
-  if (!res.ok) throw new Error('Proxy returned HTTP ' + res.status);
+  // No client-side timeout — wait as long as the proxy needs.
+  // The proxy / Vercel platform will enforce its own limit and surface errors.
+  const res = await fetch(METABASE_JSON_URL, { method: 'GET' });
+  if (!res.ok) throw new Error('Proxy returned HTTP ' + res.status + ' ' + res.statusText);
   const payload = await res.json();
   if (payload && payload.__proxy_error) {
     const err = new Error(payload.message || 'Proxy could not fetch data');
@@ -952,11 +950,30 @@ function applyRows(rows) {
   renderAll();
 }
 
-async function refreshFromMetabase(useCache) {
+let loadTimer = null;
+function startLoadTimer(useCache) {
   const t0 = performance.now();
-  setBanner('loading', '<strong>Fetching from Metabase…</strong> Can take 30–60 seconds.' + (useCache ? ' Cached data is shown below in the meantime.' : ''));
+  function tick() {
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+    setBanner('loading',
+      '<strong>Fetching from Metabase…</strong> Elapsed: <span class="font-mono" style="color:var(--accent);font-weight:600">' + elapsed + 's</span>' +
+      ' · Metabase queries can take 30-120s. Please wait.' +
+      (useCache ? '<br>Cached data is shown below in the meantime.' : '')
+    );
+  }
+  tick();
+  loadTimer = setInterval(tick, 100);
+  return t0;
+}
+function stopLoadTimer() {
+  if (loadTimer) { clearInterval(loadTimer); loadTimer = null; }
+}
+
+async function refreshFromMetabase(useCache) {
+  const t0 = startLoadTimer(useCache);
   try {
     const rows = await fetchData();
+    stopLoadTimer();
     const ms = Math.round(performance.now() - t0);
     saveCache(rows);
     applyRows(rows);
@@ -965,6 +982,8 @@ async function refreshFromMetabase(useCache) {
       '<a href="#" onclick="forceRefresh();return false;">refresh now</a>'
     );
   } catch (err) {
+    stopLoadTimer();
+    const ms = Math.round(performance.now() - t0);
     console.error('Refresh failed:', err);
     let diagHtml = '';
     if (err.diagnostic && err.diagnostic.attempts) {
@@ -973,7 +992,7 @@ async function refreshFromMetabase(useCache) {
       }).join('');
     }
     setBanner('error',
-      '<strong>Could not refresh data</strong><br>Error: ' + escapeHTML(String(err.message || err)) +
+      '<strong>Could not refresh data after ' + (ms/1000).toFixed(1) + 's</strong><br>Error: ' + escapeHTML(String(err.message || err)) +
       (useCache ? '<br>Showing cached data below. Click <a href="#" onclick="forceRefresh();return false;">retry</a>.' : '') +
       diagHtml +
       '<br><br>Test: <a href="/api/data" target="_blank">/api/data</a>'
