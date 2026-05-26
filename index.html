@@ -45,6 +45,26 @@ h1.title{font-family:'Bricolage Grotesque',serif;font-size:64px;line-height:.95;
 .meta .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:var(--ink-500)}
 .meta .val{font-size:14px;color:var(--ink-900);margin-top:4px}
 
+/* Data source banner */
+.data-banner{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:24px;
+  border:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px;
+}
+.data-banner.loading{background:#fff;color:var(--ink-700)}
+.data-banner.success{background:rgba(47,125,79,.06);color:#2f7d4f;border-color:rgba(47,125,79,.3)}
+.data-banner.error{background:rgba(194,65,12,.06);color:var(--negative);border-color:rgba(194,65,12,.3);flex-direction:column;align-items:flex-start}
+.data-banner .icon{flex-shrink:0;width:14px;height:14px;border-radius:50%}
+.data-banner.loading .icon{background:var(--ink-300);animation:pulse 1.2s ease-in-out infinite}
+.data-banner.success .icon{background:#2f7d4f}
+.data-banner.error .icon{background:var(--negative)}
+.data-banner .body{flex:1;min-width:0}
+.data-banner .body strong{font-weight:600}
+.data-banner pre{margin-top:8px;padding:10px 12px;background:#0e0e0c;color:#f6f6f4;font-size:11px;width:100%;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.data-banner a{color:inherit;text-decoration:underline}
+.data-banner ol{margin:8px 0 0 20px;padding:0}
+.data-banner ol li{margin:4px 0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
 /* Filter bar */
 .filter-bar{
   display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:24px;
@@ -224,6 +244,14 @@ footer{padding-top:32px;border-top:1px solid var(--line);display:flex;justify-co
     </div>
   </header>
 
+  <!-- Data source status banner -->
+  <div id="dataBanner" class="data-banner loading rise d1">
+    <span class="icon"></span>
+    <div class="body">
+      <strong>Loading data from Metabase…</strong>
+    </div>
+  </div>
+
   <!-- Filter bar -->
   <div class="filter-bar rise d1">
     <div class="group">
@@ -399,117 +427,58 @@ footer{padding-top:32px;border-top:1px solid var(--line);display:flex;justify-co
   </section>
 
   <footer>
-    <div>Source: metabase.spyne.ai / question 12089</div>
-    <div>Mock data for preview — replace fetchData() to wire Metabase</div>
+    <div>Source: metabase.spyne.ai · question 12089 · public UUID d5777560…</div>
+    <div>Data fetched live from Metabase public endpoint</div>
   </footer>
 </main>
 
 <script>
 /* ============================================================
-   DATA LAYER — Replace fetchData() to pull from Metabase
+   DATA LAYER — Wired to Metabase public question
    ============================================================ */
+
+// Metabase public question UUID for question 12089
+const METABASE_BASE = 'https://metabase.spyne.ai';
+const METABASE_UUID = 'd5777560-dcd6-427f-a8c1-e745c4d24aa6';
+const METABASE_JSON_URL = `${METABASE_BASE}/api/public/card/${METABASE_UUID}/query/json`;
+
 function normalizeRow(raw) {
+  // Preserve every column as-is from Metabase; only add safe fallback access
+  // for the dotted column names (ai.image_id, etc) so JS can read them.
+  // The dashboard only uses the keys it needs; all other columns are kept untouched.
+  const get = (k1, k2) => raw[k1] ?? raw[k2] ?? '';
   return {
-    ai_enterprise_id: String(raw['ai.enterprise_id'] ?? raw.ai_enterprise_id ?? ''),
+    // raw passthrough for "all records" table — preserves every original column
+    __raw: raw,
+    // normalized accessors used by aggregations
+    ai_enterprise_id: String(get('ai.enterprise_id', 'ai_enterprise_id')),
     enterprise_name: String(raw.enterprise_name ?? ''),
-    ai_team_id: String(raw['ai.team_id'] ?? raw.ai_team_id ?? ''),
-    etd_team_name: String(raw['etd.team_name'] ?? raw.etd_team_name ?? ''),
-    customer_segment: String(raw['customer-segment'] ?? raw.customer_segment ?? ''),
+    ai_team_id: String(get('ai.team_id', 'ai_team_id')),
+    etd_team_name: String(get('etd.team_name', 'etd_team_name')),
+    customer_segment: String(get('customer-segment', 'customer_segment')),
     cs_poc_email: String(raw.cs_poc_email ?? ''),
     ob_poc_email: String(raw.ob_poc_email ?? ''),
-    ai_image_id: String(raw['ai.image_id'] ?? raw.ai_image_id ?? ''),
+    ai_image_id: String(get('ai.image_id', 'ai_image_id')),
     sku_id: String(raw.sku_id ?? ''),
     image_category: String(raw.image_category ?? ''),
     status: raw.status ?? 'pending',
     rejected_comment: raw.rejected_comment ?? null,
-    created_on: String(raw.created_on ?? new Date().toISOString()),
+    created_on: String(raw.created_on ?? ''),
   };
-}
-
-function mulberry32(seed){return function(){let t=(seed+=0x6d2b79f5);t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
-const rand = mulberry32(42);
-function pick(arr){return arr[Math.floor(rand()*arr.length)]}
-
-function generateMockData() {
-  const enterprises = [
-    { id: 'ent_001', name: 'AutoTrader Hub', segment: 'Enterprise' },
-    { id: 'ent_002', name: 'CarMax Digital', segment: 'Enterprise' },
-    { id: 'ent_003', name: 'DriveZone', segment: 'Mid-Market' },
-    { id: 'ent_004', name: 'MotorBay', segment: 'SMB' },
-    { id: 'ent_005', name: 'Velocity Motors', segment: 'Enterprise' },
-    { id: 'ent_006', name: 'GearShift Auto', segment: 'Mid-Market' },
-    { id: 'ent_007', name: 'PrimeWheels', segment: 'SMB' },
-    { id: 'ent_008', name: 'Crossroads Cars', segment: 'Mid-Market' },
-  ];
-  const teamsByEnt = {
-    ent_001: ['Production Alpha', 'Production Beta'],
-    ent_002: ['North Studio', 'South Studio'],
-    ent_003: ['Main Production'],
-    ent_004: ['Single Team'],
-    ent_005: ['Studio One', 'Studio Two', 'Studio Three'],
-    ent_006: ['East Team', 'West Team'],
-    ent_007: ['Solo Team'],
-    ent_008: ['Production Hub'],
-  };
-  const csPOCs = ['priya.sharma@spyne.ai','rohan.gupta@spyne.ai','aditi.verma@spyne.ai','kunal.mehta@spyne.ai'];
-  const obPOCs = ['arjun.singh@spyne.ai','neha.kapoor@spyne.ai','vikram.rao@spyne.ai'];
-  const categories = ['Exterior','Interior','Engine','Wheels','Dashboard','Trunk'];
-  const statuses = ['completed','in_progress','rejected','pending'];
-  const rejectReasons = ['Blurry image','Incorrect angle','Poor lighting','Watermark detected','Background issue','Resolution too low'];
-
-  const pocMap = new Map();
-  enterprises.forEach(ent => {
-    teamsByEnt[ent.id].forEach(team => {
-      pocMap.set(`${ent.id}|${team}`, {
-        cs: csPOCs[Math.floor(rand()*csPOCs.length)],
-        ob: obPOCs[Math.floor(rand()*obPOCs.length)],
-      });
-    });
-  });
-
-  const rows = [];
-  const now = new Date();
-  const start = new Date(now);
-  start.setDate(start.getDate() - 29);
-  let imageCounter = 1;
-  for (let d = 0; d < 30; d++) {
-    const date = new Date(start);
-    date.setDate(start.getDate() + d);
-    const dow = date.getDay();
-    const baseVolume = (dow===0||dow===6) ? 35 : 90;
-    const dailyVolume = baseVolume + Math.floor(rand()*40);
-    for (let i = 0; i < dailyVolume; i++) {
-      const ent = pick(enterprises);
-      const team = pick(teamsByEnt[ent.id]);
-      const pocs = pocMap.get(`${ent.id}|${team}`);
-      const status = pick(statuses);
-      const skuGroup = Math.floor((imageCounter-1)/4) + 1;
-      const ts = new Date(date);
-      ts.setHours(Math.floor(rand()*24), Math.floor(rand()*60), 0, 0);
-      rows.push({
-        ai_enterprise_id: ent.id,
-        enterprise_name: ent.name,
-        ai_team_id: `team_${ent.id}_${team.replace(/\s+/g,'_').toLowerCase()}`,
-        etd_team_name: team,
-        customer_segment: ent.segment,
-        cs_poc_email: pocs.cs,
-        ob_poc_email: pocs.ob,
-        ai_image_id: `img_${String(imageCounter).padStart(6,'0')}`,
-        sku_id: `sku_${String(skuGroup).padStart(5,'0')}`,
-        image_category: pick(categories),
-        status,
-        rejected_comment: status === 'rejected' ? pick(rejectReasons) : null,
-        created_on: ts.toISOString(),
-      });
-      imageCounter++;
-    }
-  }
-  return rows;
 }
 
 async function fetchData() {
-  // REPLACE THIS to call Metabase or your proxy endpoint
-  return generateMockData();
+  // Browser-direct fetch to Metabase public endpoint.
+  // Note: this requires Metabase to allow cross-origin requests from this page's host.
+  const res = await fetch(METABASE_JSON_URL, { method: 'GET' });
+  if (!res.ok) {
+    throw new Error(`Metabase returned HTTP ${res.status} ${res.statusText}`);
+  }
+  const raw = await res.json();
+  if (!Array.isArray(raw)) {
+    throw new Error('Metabase response was not an array. Got: ' + typeof raw);
+  }
+  return raw.map(normalizeRow);
 }
 
 /* ============================================================
@@ -993,20 +962,25 @@ function getFilteredRows() {
   let rows = state.filtered;
   if (state.rowSearch) {
     const q = state.rowSearch;
-    rows = rows.filter(r =>
-      r.ai_image_id.toLowerCase().includes(q) ||
-      r.sku_id.toLowerCase().includes(q) ||
-      r.enterprise_name.toLowerCase().includes(q) ||
-      r.etd_team_name.toLowerCase().includes(q) ||
-      r.cs_poc_email.toLowerCase().includes(q) ||
-      r.ob_poc_email.toLowerCase().includes(q) ||
-      r.image_category.toLowerCase().includes(q) ||
-      (r.rejected_comment||'').toLowerCase().includes(q)
-    );
+    rows = rows.filter(r => {
+      // Search across every column — normalized and raw — so nothing is hidden.
+      if (r.__raw) {
+        for (const k in r.__raw) {
+          if (String(r.__raw[k] ?? '').toLowerCase().includes(q)) return true;
+        }
+      }
+      for (const k in r) {
+        if (k === '__raw') continue;
+        if (String(r[k] ?? '').toLowerCase().includes(q)) return true;
+      }
+      return false;
+    });
   }
-  const { col, dir } = state.rowSort;
-  rows = [...rows].sort((a,b)=>{
-    let av = a[col], bv = b[col];
+  const { col, dir, fromRaw } = state.rowSort;
+  rows = [...rows].sort((a,b) => {
+    let av, bv;
+    if (fromRaw && a.__raw && b.__raw) { av = a.__raw[col]; bv = b.__raw[col]; }
+    else { av = a[col]; bv = b[col]; }
     if (av == null) av = '';
     if (bv == null) bv = '';
     if (typeof av === 'string') { av = av.toLowerCase(); bv = String(bv).toLowerCase(); }
@@ -1025,45 +999,55 @@ function renderRowsTable() {
   const startIdx = (state.rowPage - 1) * state.rowsPerPage;
   const slice = rows.slice(startIdx, startIdx + state.rowsPerPage);
 
-  const cols = [
-    {key:'created_on', label:'Created'},
-    {key:'ai_image_id', label:'Image ID'},
-    {key:'sku_id', label:'SKU'},
-    {key:'image_category', label:'Category'},
-    {key:'status', label:'Status'},
-    {key:'enterprise_name', label:'Enterprise'},
-    {key:'etd_team_name', label:'Team'},
-    {key:'customer_segment', label:'Segment'},
-    {key:'cs_poc_email', label:'CS POC'},
-    {key:'ob_poc_email', label:'OB POC'},
-    {key:'ai_enterprise_id', label:'Ent ID'},
-    {key:'ai_team_id', label:'Team ID'},
-    {key:'rejected_comment', label:'Rejected Comment'},
-  ];
+  // Build column list directly from Metabase response — show every original column,
+  // preserving exact names (ai.image_id, etc). Falls back to normalized keys if no __raw.
+  const rawSample = rows.length && rows[0].__raw ? rows[0].__raw : null;
+  const cols = rawSample
+    ? Object.keys(rawSample).map(k => ({ key: k, label: k, fromRaw: true }))
+    : [
+        {key:'created_on', label:'created_on'},
+        {key:'ai_image_id', label:'ai.image_id'},
+        {key:'sku_id', label:'sku_id'},
+        {key:'image_category', label:'image_category'},
+        {key:'status', label:'status'},
+        {key:'enterprise_name', label:'enterprise_name'},
+        {key:'etd_team_name', label:'etd.team_name'},
+        {key:'customer_segment', label:'customer-segment'},
+        {key:'cs_poc_email', label:'cs_poc_email'},
+        {key:'ob_poc_email', label:'ob_poc_email'},
+        {key:'ai_enterprise_id', label:'ai.enterprise_id'},
+        {key:'ai_team_id', label:'ai.team_id'},
+        {key:'rejected_comment', label:'rejected_comment'},
+      ];
 
   document.getElementById('rowsThead').innerHTML = cols.map(c => {
     const active = state.rowSort.col === c.key;
     const arrow = active ? (state.rowSort.dir === 'asc' ? '↑' : '↓') : '↕';
-    return `<th class="sortable ${active?'active':''}" onclick="sortRows('${c.key}')">${escapeHTML(c.label)}<span class="arrow">${arrow}</span></th>`;
+    const safeKey = c.key.replace(/'/g, "\\'");
+    return `<th class="sortable ${active?'active':''}" onclick="sortRows('${safeKey}', ${c.fromRaw?'true':'false'})">${escapeHTML(c.label)}<span class="arrow">${arrow}</span></th>`;
   }).join('');
 
-  document.getElementById('rowsTbody').innerHTML = slice.map(r => `
-    <tr>
-      <td class="mono" style="white-space:nowrap">${fullDate(r.created_on)}</td>
-      <td class="mono">${escapeHTML(r.ai_image_id)}</td>
-      <td class="mono">${escapeHTML(r.sku_id)}</td>
-      <td>${escapeHTML(r.image_category)}</td>
-      <td><span class="status-badge status-${r.status}">${escapeHTML(r.status.replace('_',' '))}</span></td>
-      <td>${escapeHTML(r.enterprise_name)}</td>
-      <td class="mono">${escapeHTML(r.etd_team_name)}</td>
-      <td><span class="segment-pill">${escapeHTML(r.customer_segment)}</span></td>
-      <td class="mono" style="font-size:11px">${escapeHTML(r.cs_poc_email)}</td>
-      <td class="mono" style="font-size:11px">${escapeHTML(r.ob_poc_email)}</td>
-      <td class="mono" style="font-size:11px;color:var(--ink-500)">${escapeHTML(r.ai_enterprise_id)}</td>
-      <td class="mono" style="font-size:11px;color:var(--ink-500)">${escapeHTML(r.ai_team_id)}</td>
-      <td class="rejected-cell">${r.rejected_comment ? escapeHTML(r.rejected_comment) : '—'}</td>
-    </tr>
-  `).join('');
+  document.getElementById('rowsTbody').innerHTML = slice.map(r => {
+    return '<tr>' + cols.map(c => {
+      let v = c.fromRaw ? (r.__raw ? r.__raw[c.key] : r[c.key]) : r[c.key];
+      if (v === null || v === undefined || v === '') return '<td class="mono" style="color:var(--ink-300)">—</td>';
+      const s = String(v);
+      // Special formatting for known semantic columns
+      if (c.label === 'status' || c.key === 'status') {
+        return `<td><span class="status-badge status-${s}">${escapeHTML(s.replace('_',' '))}</span></td>`;
+      }
+      if (c.label === 'customer-segment' || c.key === 'customer_segment') {
+        return `<td><span class="segment-pill">${escapeHTML(s)}</span></td>`;
+      }
+      if (c.label === 'created_on' || c.key === 'created_on') {
+        return `<td class="mono" style="white-space:nowrap">${escapeHTML(formatDateSafe(s))}</td>`;
+      }
+      if (c.label === 'rejected_comment' || c.key === 'rejected_comment') {
+        return `<td class="rejected-cell">${escapeHTML(s)}</td>`;
+      }
+      return `<td class="mono" style="font-size:11px">${escapeHTML(s)}</td>`;
+    }).join('') + '</tr>';
+  }).join('');
 
   document.getElementById('pgNum').textContent = state.rowPage;
   document.getElementById('pgTotal').textContent = totalPages;
@@ -1073,9 +1057,17 @@ function renderRowsTable() {
   document.getElementById('pgNext').disabled = state.rowPage >= totalPages;
 }
 
-function sortRows(col) {
+function formatDateSafe(s) {
+  if (!s) return '';
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s; // leave untouched if it's not parseable as a date
+  return d.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+}
+
+function sortRows(col, fromRaw) {
   if (state.rowSort.col === col) state.rowSort.dir = state.rowSort.dir === 'asc' ? 'desc' : 'asc';
   else { state.rowSort.col = col; state.rowSort.dir = 'desc'; }
+  state.rowSort.fromRaw = !!fromRaw;
   renderRowsTable();
 }
 
@@ -1088,10 +1080,14 @@ function changePage(d) {
 function exportCSV() {
   const rows = getFilteredRows();
   if (!rows.length) return;
-  const cols = ['ai_enterprise_id','enterprise_name','ai_team_id','etd_team_name','customer_segment','cs_poc_email','ob_poc_email','ai_image_id','sku_id','image_category','status','rejected_comment','created_on'];
+  // Use raw columns from Metabase verbatim if available; fall back to normalized keys.
+  const cols = rows[0].__raw
+    ? Object.keys(rows[0].__raw)
+    : ['ai_enterprise_id','enterprise_name','ai_team_id','etd_team_name','customer_segment','cs_poc_email','ob_poc_email','ai_image_id','sku_id','image_category','status','rejected_comment','created_on'];
   const csv = [cols.join(',')].concat(
     rows.map(r => cols.map(c => {
-      const v = r[c] == null ? '' : String(r[c]);
+      const src = r.__raw || r;
+      const v = src[c] == null ? '' : String(src[c]);
       return /[",\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v;
     }).join(','))
   ).join('\n');
@@ -1119,15 +1115,47 @@ function renderAll() {
   renderRowsTable();
 }
 
+function setBanner(state, html) {
+  const el = document.getElementById('dataBanner');
+  if (!el) return;
+  el.className = 'data-banner ' + state + ' rise d1';
+  el.innerHTML = '<span class="icon"></span><div class="body">' + html + '</div>';
+}
+
 async function init() {
   document.getElementById('lastUpdated').textContent = nowStamp();
-  state.allRows = await fetchData();
-  state.filtered = state.allRows.slice();
-  populateFilters();
-  bindFilters();
-  document.getElementById('filteredCount').textContent = fmt(state.filtered.length);
-  document.getElementById('totalCount').textContent = fmt(state.allRows.length);
-  renderAll();
+  setBanner('loading', '<strong>Loading data from Metabase…</strong><br>Fetching <a href="' + METABASE_JSON_URL + '" target="_blank">' + METABASE_JSON_URL + '</a>');
+  try {
+    const rows = await fetchData();
+    state.allRows = rows;
+    state.filtered = state.allRows.slice();
+    setBanner('success',
+      '<strong>Connected to Metabase</strong> · ' + fmt(rows.length) + ' rows loaded · question 12089'
+    );
+    populateFilters();
+    bindFilters();
+    document.getElementById('filteredCount').textContent = fmt(state.filtered.length);
+    document.getElementById('totalCount').textContent = fmt(state.allRows.length);
+    renderAll();
+  } catch (err) {
+    console.error('Data load failed:', err);
+    const isCors = String(err).toLowerCase().includes('fetch') || String(err).toLowerCase().includes('network') || String(err).toLowerCase().includes('cors');
+    setBanner('error',
+      '<strong>Could not load data from Metabase</strong>' +
+      '<br>Error: ' + escapeHTML(String(err.message || err)) +
+      (isCors
+        ? '<br><br>This is most likely a <strong>CORS restriction</strong> — the browser blocked the request because Metabase did not send an <code>Access-Control-Allow-Origin</code> header for this page\'s domain.<br><br>' +
+          'Fixes (any one will work):' +
+          '<ol>' +
+          '<li>Test the URL directly in a browser tab — it should return a JSON array. If it does but the dashboard still fails, the issue is CORS.</li>' +
+          '<li>Host the dashboard on the same domain as Metabase (a subpath of <code>metabase.spyne.ai</code>), or</li>' +
+          '<li>Add a tiny serverless proxy on Vercel that fetches the URL server-side and re-serves it with permissive CORS headers. Then change <code>METABASE_JSON_URL</code> at the top of the script to point to your proxy.</li>' +
+          '<li>Ask your Metabase admin to allow your dashboard\'s origin in the Metabase reverse-proxy / CORS config.</li>' +
+          '</ol>' +
+          'URL attempted:<pre>' + escapeHTML(METABASE_JSON_URL) + '</pre>'
+        : '<br><br>URL attempted:<pre>' + escapeHTML(METABASE_JSON_URL) + '</pre>')
+    );
+  }
 }
 
 init();
