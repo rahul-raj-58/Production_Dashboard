@@ -331,10 +331,44 @@ async function fetchWithTimeout(url, ms) {
   finally { clearTimeout(t); }
 }
 
+// Try direct browser fetch first (Metabase works fine for browsers).
+// If CORS blocks it, fall back to the Vercel proxy.
+const METABASE_DIRECT_URL = 'https://metabase.spyne.ai/api/public/card/d5777560-dcd6-427f-a8c1-e745c4d24aa6/query/json';
+const PROXY_URL = '/api/data';
+
 async function fetchData() {
-  // No client-side timeout — wait as long as the proxy needs.
-  // The proxy / Vercel platform will enforce its own limit and surface errors.
-  const res = await fetch(METABASE_JSON_URL, { method: 'GET' });
+  // Strategy 1: direct fetch (fast, but may be blocked by CORS)
+  try {
+    const res = await fetch(METABASE_DIRECT_URL, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      credentials: 'omit', // don't send cookies (avoids preflight)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        console.log('Direct Metabase fetch succeeded:', data.length, 'rows');
+        return data.map(normalizeRow);
+      }
+      if (data && data.data && Array.isArray(data.data.rows)) {
+        // Metabase wrapped shape
+        const cols = data.data.cols.map(function (c) { return c.name || c.display_name; });
+        const rows = data.data.rows.map(function (row) {
+          const obj = {};
+          cols.forEach(function (name, i) { obj[name] = row[i]; });
+          return obj;
+        });
+        console.log('Direct Metabase fetch (wrapped) succeeded:', rows.length, 'rows');
+        return rows.map(normalizeRow);
+      }
+    }
+  } catch (directErr) {
+    console.warn('Direct Metabase fetch failed, falling back to proxy:', directErr.message);
+  }
+
+  // Strategy 2: fall back to Vercel proxy
+  console.log('Falling back to Vercel proxy at', PROXY_URL);
+  const res = await fetch(PROXY_URL, { method: 'GET' });
   if (!res.ok) throw new Error('Proxy returned HTTP ' + res.status + ' ' + res.statusText);
   const payload = await res.json();
   if (payload && payload.__proxy_error) {
