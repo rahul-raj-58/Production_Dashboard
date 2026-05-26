@@ -240,7 +240,7 @@ footer{padding-top:32px;border-top:1px solid var(--line);display:flex;justify-co
     <div class="meta">
       <div class="lbl">Last updated</div>
       <div class="val" id="lastUpdated">—</div>
-      <div class="lbl" style="margin-top:8px">Window: last 30 days</div>
+      <div class="lbl" style="margin-top:8px">First 2,000 rows</div>
     </div>
   </header>
 
@@ -1209,7 +1209,7 @@ async function refreshFromMetabase(useCache) {
     applyRows(rows);
     setBanner('success',
       '<strong>Fresh data loaded</strong> · ' + fmt(rows.length) + ' rows in ' + (ms/1000).toFixed(1) + 's · ' +
-      'cached locally · <a href="#" onclick="forceRefresh();return false;">refresh now</a>'
+      'showing first 2000 rows · cached locally · <a href="#" onclick="forceRefresh();return false;">refresh now</a>'
     );
   } catch (err) {
     console.error('Refresh failed:', err);
