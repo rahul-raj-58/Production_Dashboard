@@ -471,17 +471,20 @@ function normalizeRow(raw) {
 }
 
 async function fetchData() {
-  // Browser-direct fetch to Metabase public endpoint.
-  // Note: this requires Metabase to allow cross-origin requests from this page's host.
   const res = await fetch(METABASE_JSON_URL, { method: 'GET' });
   if (!res.ok) {
-    throw new Error(`Metabase returned HTTP ${res.status} ${res.statusText}`);
+    throw new Error(`Proxy returned HTTP ${res.status} ${res.statusText}`);
   }
-  const raw = await res.json();
-  if (!Array.isArray(raw)) {
-    throw new Error('Metabase response was not an array. Got: ' + typeof raw);
+  const payload = await res.json();
+  if (payload && payload.__proxy_error) {
+    const e = new Error(payload.message || 'Proxy could not fetch data');
+    e.diagnostic = payload;
+    throw e;
   }
-  return raw.map(normalizeRow);
+  if (!Array.isArray(payload)) {
+    throw new Error('Response was not an array. Got: ' + typeof payload);
+  }
+  return payload.map(normalizeRow);
 }
 
 /* ============================================================
@@ -1144,13 +1147,23 @@ async function init() {
     renderAll();
   } catch (err) {
     console.error('Data load failed:', err);
+    let diagHtml = '';
+    if (err.diagnostic && err.diagnostic.attempts) {
+      diagHtml = '<br><br><strong>Diagnostic — URLs tried:</strong>' +
+        err.diagnostic.attempts.map(a =>
+          '<pre>URL: ' + escapeHTML(a.url) +
+          '\nStatus: ' + a.status + ' · isArray: ' + a.isArray + ' · isMetabaseShape: ' + (a.hasMetabaseShape||false) +
+          '\nContent-Type: ' + (a.contentType || '—') +
+          (a.error ? '\nError: ' + escapeHTML(a.error) : '') +
+          (a.bodyPreview ? '\nBody preview: ' + escapeHTML(a.bodyPreview.slice(0,400)) : '') +
+          '</pre>'
+        ).join('');
+    }
     setBanner('error',
       '<strong>Could not load data</strong>' +
       '<br>Error: ' + escapeHTML(String(err.message || err)) +
-      '<br><br>' +
-      'Most likely the proxy <code>/api/data</code> is not deployed yet. Make sure your Vercel project contains <code>api/data.js</code> at the root.' +
-      '<br><br>Test the proxy directly: <a href="/api/data" target="_blank">/api/data</a>' +
-      '<br>Should return JSON. If it returns 404, redeploy. If 500, check Vercel logs.'
+      diagHtml +
+      '<br>Open <a href="/api/data" target="_blank">/api/data</a> directly to see the raw proxy response.'
     );
   }
 }
