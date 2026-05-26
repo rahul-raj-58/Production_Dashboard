@@ -470,10 +470,58 @@ function normalizeRow(raw) {
   };
 }
 
+// Cache key — bump version if data shape changes
+const CACHE_KEY = 'spyne_metabase_data_v1';
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.rows)) return null;
+    return parsed; // { rows, fetchedAt }
+  } catch (e) { return null; }
+}
+
+function saveCache(rows) {
+  try {
+    const payload = JSON.stringify({ rows: rows, fetchedAt: Date.now() });
+    localStorage.setItem(CACHE_KEY, payload);
+  } catch (e) {
+    // localStorage might be full or disabled — silently ignore
+    console.warn('Could not save to cache:', e);
+  }
+}
+
+function clearCache() {
+  try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
+}
+
+async function fetchWithTimeout(url, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(function () { controller.abort(); }, ms);
+  try {
+    const res = await fetch(url, { method: 'GET', signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchData() {
-  const res = await fetch(METABASE_JSON_URL, { method: 'GET' });
+  // 55 second timeout — Vercel free-tier functions cap at 60s anyway
+  let res;
+  try {
+    res = await fetchWithTimeout(METABASE_JSON_URL, 55000);
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      throw new Error('Request timed out after 55 seconds — Metabase query is too slow. Try the cache or contact your Metabase admin to optimize the query.');
+    }
+    throw e;
+  }
   if (!res.ok) {
-    throw new Error(`Proxy returned HTTP ${res.status} ${res.statusText}`);
+    throw new Error('Proxy returned HTTP ' + res.status + ' ' + res.statusText);
   }
   const payload = await res.json();
   if (payload && payload.__proxy_error) {
@@ -1128,43 +1176,90 @@ function setBanner(state, html) {
   el.innerHTML = '<span class="icon"></span><div class="body">' + html + '</div>';
 }
 
-async function init() {
-  document.getElementById('lastUpdated').textContent = nowStamp();
-  setBanner('loading', '<strong>Loading data…</strong> Fetching from Metabase via proxy.');
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + ' min ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
+
+function applyRows(rows) {
+  state.allRows = rows;
+  state.filtered = state.allRows.slice();
+  populateFilters();
+  bindFilters();
+  document.getElementById('filteredCount').textContent = fmt(state.filtered.length);
+  document.getElementById('totalCount').textContent = fmt(state.allRows.length);
+  renderAll();
+}
+
+async function refreshFromMetabase(useCache) {
   const t0 = performance.now();
+  setBanner('loading',
+    '<strong>Fetching fresh data from Metabase…</strong> This can take 30–60 seconds for the first request.' +
+    (useCache ? ' Showing cached data below in the meantime.' : '')
+  );
   try {
     const rows = await fetchData();
     const ms = Math.round(performance.now() - t0);
-    state.allRows = rows;
-    state.filtered = state.allRows.slice();
+    saveCache(rows);
+    applyRows(rows);
     setBanner('success',
-      '<strong>Connected</strong> · ' + fmt(rows.length) + ' rows loaded in ' + ms + ' ms · question 12089 · cached for 60s'
+      '<strong>Fresh data loaded</strong> · ' + fmt(rows.length) + ' rows in ' + (ms/1000).toFixed(1) + 's · ' +
+      'cached locally · <a href="#" onclick="forceRefresh();return false;">refresh now</a>'
     );
-    populateFilters();
-    bindFilters();
-    document.getElementById('filteredCount').textContent = fmt(state.filtered.length);
-    document.getElementById('totalCount').textContent = fmt(state.allRows.length);
-    renderAll();
   } catch (err) {
-    console.error('Data load failed:', err);
+    console.error('Refresh failed:', err);
     let diagHtml = '';
     if (err.diagnostic && err.diagnostic.attempts) {
       diagHtml = '<br><br><strong>Diagnostic — URLs tried:</strong>' +
-        err.diagnostic.attempts.map(a =>
-          '<pre>URL: ' + escapeHTML(a.url) +
-          '\nStatus: ' + a.status + ' · isArray: ' + a.isArray + ' · isMetabaseShape: ' + (a.hasMetabaseShape||false) +
-          '\nContent-Type: ' + (a.contentType || '—') +
-          (a.error ? '\nError: ' + escapeHTML(a.error) : '') +
-          (a.bodyPreview ? '\nBody preview: ' + escapeHTML(a.bodyPreview.slice(0,400)) : '') +
-          '</pre>'
-        ).join('');
+        err.diagnostic.attempts.map(function (a) {
+          return '<pre>URL: ' + escapeHTML(a.url) +
+            '\nStatus: ' + a.status + ' · isArray: ' + a.isArray + ' · isMetabaseShape: ' + (a.hasMetabaseShape||false) +
+            '\nContent-Type: ' + (a.contentType || '—') +
+            (a.error ? '\nError: ' + escapeHTML(a.error) : '') +
+            (a.bodyPreview ? '\nBody preview: ' + escapeHTML(a.bodyPreview.slice(0,400)) : '') +
+            '</pre>';
+        }).join('');
     }
     setBanner('error',
-      '<strong>Could not load data</strong>' +
+      '<strong>Could not refresh data</strong>' +
       '<br>Error: ' + escapeHTML(String(err.message || err)) +
+      (useCache ? '<br>Showing previously cached data below. Click <a href="#" onclick="forceRefresh();return false;">retry</a>.' : '') +
       diagHtml +
-      '<br>Open <a href="/api/data" target="_blank">/api/data</a> directly to see the raw proxy response.'
+      '<br><br>Test the proxy directly: <a href="/api/data" target="_blank">/api/data</a>'
     );
+  }
+}
+
+function forceRefresh() {
+  clearCache();
+  refreshFromMetabase(false);
+}
+
+async function init() {
+  document.getElementById('lastUpdated').textContent = nowStamp();
+
+  const cached = loadCache();
+  if (cached && cached.rows && cached.rows.length) {
+    // Show cached data IMMEDIATELY so the dashboard never looks empty
+    applyRows(cached.rows);
+    const isStale = (Date.now() - cached.fetchedAt) > CACHE_TTL_MS;
+    setBanner(isStale ? 'loading' : 'success',
+      '<strong>' + (isStale ? 'Showing cached data (stale)' : 'Showing cached data') + '</strong> · ' +
+      fmt(cached.rows.length) + ' rows · fetched ' + timeAgo(cached.fetchedAt) + ' · ' +
+      '<a href="#" onclick="forceRefresh();return false;">refresh from Metabase</a>'
+    );
+    // Background refresh if stale
+    if (isStale) {
+      refreshFromMetabase(true);
+    }
+  } else {
+    // No cache — must fetch now
+    await refreshFromMetabase(false);
   }
 }
 
