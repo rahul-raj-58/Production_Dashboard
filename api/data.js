@@ -2,8 +2,6 @@
 // Robust version — never crashes the runtime, always returns JSON with details.
 
 const UUID = 'd5777560-dcd6-427f-a8c1-e745c4d24aa6';
-
-
 const BASE = 'https://metabase.spyne.ai';
 
 const CANDIDATE_URLS = [
