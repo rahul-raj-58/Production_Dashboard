@@ -1,9 +1,9 @@
 // Vercel Serverless Function: /api/data
-// Maximum-compatibility version. Uses Promise chains instead of async/await
-// in the exported handler to avoid any runtime-specific quirks.
+// Fetches Metabase public question and returns at most ROW_LIMIT rows.
 
 const UUID = 'd5777560-dcd6-427f-a8c1-e745c4d24aa6';
 const BASE = 'https://metabase.spyne.ai';
+const ROW_LIMIT = 2000;
 
 const CANDIDATE_URLS = [
   BASE + '/api/public/card/' + UUID + '/query/json',
@@ -119,11 +119,16 @@ module.exports = function (req, res) {
     }
     tryAllUrls(0, [], function (result) {
       if (result.success) {
+        // Limit to first ROW_LIMIT rows for faster transfer and rendering
+        const totalRows = result.rows.length;
+        const limited = result.rows.slice(0, ROW_LIMIT);
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('X-Total-Rows', String(totalRows));
+        res.setHeader('X-Returned-Rows', String(limited.length));
         res.statusCode = 200;
-        res.end(JSON.stringify(result.rows));
+        res.end(JSON.stringify(limited));
       } else {
         jsonResponse(res, 200, {
           __proxy_error: true,
