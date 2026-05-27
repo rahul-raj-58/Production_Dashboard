@@ -193,10 +193,10 @@
   .clear-all:hover { color: var(--accent); border-color: var(--accent); }
 
   /* ============ KPI ============ */
-  .kpi-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; margin-bottom: 22px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(9, 1fr); gap: 12px; margin-bottom: 22px; }
   .kpi {
     background: var(--bg-card); border: 1px solid var(--border);
-    padding: 20px 22px; border-radius: 6px; position: relative; overflow: hidden;
+    padding: 16px 16px; border-radius: 6px; position: relative; overflow: hidden;
     cursor: pointer; transition: transform .15s, border-color .15s;
   }
   .kpi:hover { transform: translateY(-2px); border-color: var(--accent); }
@@ -204,22 +204,24 @@
     content: ''; position: absolute; left: 0; top: 0; width: 3px; height: 100%; background: var(--accent);
   }
   .kpi:nth-child(2)::before { background: var(--teal); }
-  .kpi:nth-child(3)::before { background: var(--violet); }
-  .kpi:nth-child(4)::before { background: var(--amber); }
-  .kpi:nth-child(5)::before { background: var(--blue); }
-  .kpi:nth-child(6)::before { background: var(--pink); }
-  .kpi:nth-child(7)::before { background: var(--green); }
+  .kpi:nth-child(3)::before { background: #c084fc; }
+  .kpi:nth-child(4)::before { background: var(--violet); }
+  .kpi:nth-child(5)::before { background: var(--green); }
+  .kpi:nth-child(6)::before { background: var(--amber); }
+  .kpi:nth-child(7)::before { background: var(--blue); }
+  .kpi:nth-child(8)::before { background: var(--pink); }
+  .kpi:nth-child(9)::before { background: #fb7185; }
   .kpi .label {
-    font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--text-mute); margin-bottom: 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-mute); margin-bottom: 10px;
   }
   .kpi .value {
-    font-family: 'Fraunces', serif; font-size: 38px; line-height: 1;
+    font-family: 'Fraunces', serif; font-size: 30px; line-height: 1;
     font-weight: 500; letter-spacing: -0.02em;
   }
-  .kpi .sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+  .kpi .sub { font-size: 11px; color: var(--text-dim); margin-top: 6px; line-height: 1.3; }
   .kpi .drill-hint {
-    position: absolute; top: 14px; right: 14px; font-size: 10px; color: var(--text-mute);
+    position: absolute; top: 10px; right: 10px; font-size: 9px; color: var(--text-mute);
     font-family: 'JetBrains Mono', monospace; opacity: 0; transition: opacity .15s;
   }
   .kpi:hover .drill-hint { opacity: 1; }
@@ -409,7 +411,10 @@
   @media (max-width: 900px) {
     .filter-bar { grid-template-columns: repeat(2, 1fr); }
   }
-  @media (max-width: 1500px) {
+  @media (max-width: 1700px) {
+    .kpi-row { grid-template-columns: repeat(5, 1fr); }
+  }
+  @media (max-width: 1300px) {
     .kpi-row { grid-template-columns: repeat(3, 1fr); }
   }
   @media (max-width: 1100px) {
@@ -556,11 +561,23 @@
       <div class="value" id="kpi-img">—</div>
       <div class="sub" id="kpi-img-sub">first-image-created basis</div>
     </div>
+    <div class="kpi" data-drill="edited">
+      <div class="drill-hint">click to drill ↗</div>
+      <div class="label">Edited Images</div>
+      <div class="value" id="kpi-edited">—</div>
+      <div class="sub" id="kpi-edited-sub">sum of edited_image_count</div>
+    </div>
     <div class="kpi" data-drill="avg">
       <div class="drill-hint">click to drill ↗</div>
       <div class="label">Avg images / SKU</div>
       <div class="value" id="kpi-avg">—</div>
       <div class="sub" id="kpi-avg-sub">distinct_image_count ÷ ai.sku_id</div>
+    </div>
+    <div class="kpi" data-drill="tat">
+      <div class="drill-hint">click to drill ↗</div>
+      <div class="label">Avg TAT (hrs)</div>
+      <div class="value" id="kpi-tat">—</div>
+      <div class="sub" id="kpi-tat-sub">mean enterprise_tat_hours</div>
     </div>
     <div class="kpi" data-drill="cs">
       <div class="drill-hint">click to drill ↗</div>
@@ -662,14 +679,11 @@
     <div class="card span-6 seg">
       <div class="card-head">
         <div>
-          <h3>Segment leaderboard & image volume</h3>
-          <div class="sub">total SKUs and distinct images per segment · click to drill</div>
+          <h3>SKUs & images per segment</h3>
+          <div class="sub">grouped bars · click any bar to drill</div>
         </div>
       </div>
-      <div class="seg-split">
-        <div class="leaderboard" id="lb-seg"></div>
-        <div class="chart-wrap" style="height:auto;min-height:320px"><canvas id="chart-seg-images"></canvas></div>
-      </div>
+      <div class="chart-wrap tall"><canvas id="chart-seg-combined"></canvas></div>
     </div>
 
     <div class="card span-6">
@@ -680,6 +694,26 @@
         </div>
       </div>
       <div class="chart-wrap"><canvas id="chart-seg-donut"></canvas></div>
+    </div>
+
+    <div class="card span-6 crm">
+      <div class="card-head">
+        <div>
+          <h3>SKUs by CRM status</h3>
+          <div class="sub">ai.sku_id count grouped by asks.crm_status · click bar to drill</div>
+        </div>
+      </div>
+      <div class="chart-wrap tall"><canvas id="chart-crm"></canvas></div>
+    </div>
+
+    <div class="card span-6 tat">
+      <div class="card-head">
+        <div>
+          <h3>Avg TAT by enterprise</h3>
+          <div class="sub">mean enterprise_tat_hours · top 15 · click bar to drill</div>
+        </div>
+      </div>
+      <div class="chart-wrap tall"><canvas id="chart-tat-ent"></canvas></div>
     </div>
 
   </section>
@@ -826,6 +860,9 @@ function loadFromText(text, sourceLabel) {
       enterprise: pickCol(headers, ['enterprise_id','enterprise']),
       enterpriseName: pickCol(headers, ['enterprise_name','enterprise.name','enterprise']),
       teamName: pickCol(headers, ['end.team_name','team_name','end_team_name','team.name','team']),
+      tat: pickCol(headers, ['enterprise_tat_hours','tat_hours','enterprise.tat_hours','tat']),
+      crmStatus: pickCol(headers, ['asks.crm_status','crm_status','asks_crm_status','crm.status']),
+      editedCount: pickCol(headers, ['edited_image_count','edited_images','edited_image','edited.image_count']),
     };
     console.log('Resolved columns:', COLS);
     document.getElementById('file-fallback').classList.remove('visible');
@@ -986,6 +1023,8 @@ function applyAndRender() {
   renderByGroup('seg', rows);
   renderSegmentDonut(rows);
   renderSegmentImages(rows);
+  renderCRM(rows);
+  renderTATByEnterprise(rows);
   renderTopByImages('ent', rows);
   renderTopByImages('team', rows);
 }
@@ -1022,7 +1061,7 @@ function renderActiveFilters() {
 
 function renderKPIs(rows) {
   const skus = new Set(), csSet = new Set(), obSet = new Set(), entSet = new Set(), teamSet = new Set();
-  let imgSum = 0;
+  let imgSum = 0, editedSum = 0, tatSum = 0, tatN = 0;
   for (const r of rows) {
     if (COLS.sku && r[COLS.sku]) skus.add(r[COLS.sku]);
     if (COLS.csEmail && r[COLS.csEmail]) csSet.add(r[COLS.csEmail]);
@@ -1030,9 +1069,14 @@ function renderKPIs(rows) {
     if (COLS.enterpriseName && r[COLS.enterpriseName]) entSet.add(r[COLS.enterpriseName]);
     if (COLS.teamName && r[COLS.teamName]) teamSet.add(r[COLS.teamName]);
     if (COLS.imgCount && r[COLS.imgCount]) { const n = Number(r[COLS.imgCount]); if (!isNaN(n)) imgSum += n; }
+    if (COLS.editedCount && r[COLS.editedCount]) { const n = Number(r[COLS.editedCount]); if (!isNaN(n)) editedSum += n; }
+    if (COLS.tat && r[COLS.tat] != null && r[COLS.tat] !== '') {
+      const n = Number(r[COLS.tat]); if (!isNaN(n)) { tatSum += n; tatN++; }
+    }
   }
   document.getElementById('kpi-sku').textContent = fmtNum(skus.size);
   document.getElementById('kpi-img').textContent = fmtNum(imgSum);
+  document.getElementById('kpi-edited').textContent = COLS.editedCount ? fmtNum(editedSum) : '—';
   // Avg images per SKU = total distinct_image_count ÷ distinct ai.sku_id count
   const avg = skus.size > 0 ? imgSum / skus.size : 0;
   document.getElementById('kpi-avg').textContent =
@@ -1040,6 +1084,14 @@ function renderKPIs(rows) {
     avg >= 100 ? avg.toFixed(0) :
     avg >= 10  ? avg.toFixed(1) :
                  avg.toFixed(2);
+  // Avg TAT in hours
+  const tatAvg = tatN > 0 ? tatSum / tatN : 0;
+  document.getElementById('kpi-tat').textContent =
+    !COLS.tat ? '—' :
+    tatN === 0 ? '—' :
+    tatAvg >= 100 ? tatAvg.toFixed(0) :
+    tatAvg >= 10  ? tatAvg.toFixed(1) :
+                    tatAvg.toFixed(2);
   document.getElementById('kpi-cs').textContent  = fmtNum(csSet.size);
   document.getElementById('kpi-ob').textContent  = fmtNum(obSet.size);
   document.getElementById('kpi-ent').textContent = COLS.enterpriseName ? fmtNum(entSet.size) : '—';
@@ -1308,35 +1360,217 @@ function renderSegmentDonut(rows) {
   });
 }
 
-// ---------- Images per segment ----------
+// ---------- SKUs & images per segment (combined dual-axis grouped bars) ----------
 function renderSegmentImages(rows) {
   if (!COLS.segment) return;
+  const canvas = document.getElementById('chart-seg-combined');
+  if (!canvas) return;
+
+  // Per-segment: distinct SKUs + total image count
   const map = new Map();
   for (const r of rows) {
     const s = r[COLS.segment]; if (!s) continue;
-    const n = COLS.imgCount ? (Number(r[COLS.imgCount]) || 0) : 1;
-    map.set(s, (map.get(s) || 0) + n);
+    if (!map.has(s)) map.set(s, { skus: new Set(), images: 0 });
+    const o = map.get(s);
+    if (COLS.sku && r[COLS.sku]) o.skus.add(r[COLS.sku]);
+    if (COLS.imgCount && r[COLS.imgCount] != null) {
+      const n = Number(r[COLS.imgCount]); if (!isNaN(n)) o.images += n;
+    }
   }
-  const entries = [...map.entries()].sort((a,b) => b[1] - a[1]);
+  const entries = [...map.entries()]
+    .map(([k, o]) => ({ k, skus: o.skus.size, images: o.images }))
+    .sort((a,b) => b.images - a.images);
+  const labels = entries.map(e => e.k);
+  const skuData = entries.map(e => e.skus);
+  const imgData = entries.map(e => e.images);
+
+  if (CHARTS.segImg) CHARTS.segImg.destroy();
+  CHARTS.segImg = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'SKUs', data: skuData,
+          backgroundColor: '#22d3ee', borderRadius: 3, yAxisID: 'ySku',
+          datalabels: {
+            display: true, anchor: 'end', align: 'end', color: '#67e8f9',
+            backgroundColor: 'rgba(11,13,16,0.78)', borderRadius: 3,
+            padding: { top: 2, bottom: 1, left: 4, right: 4 },
+            font: { family: 'JetBrains Mono', size: 10, weight: 600 },
+            formatter: v => v > 0 ? fmtNum(v) : ''
+          }
+        },
+        {
+          label: 'Distinct images', data: imgData,
+          backgroundColor: '#fb7185', borderRadius: 3, yAxisID: 'yImg',
+          datalabels: {
+            display: true, anchor: 'end', align: 'end', color: '#fda4af',
+            backgroundColor: 'rgba(11,13,16,0.78)', borderRadius: 3,
+            padding: { top: 2, bottom: 1, left: 4, right: 4 },
+            font: { family: 'JetBrains Mono', size: 10, weight: 600 },
+            formatter: v => v > 0 ? fmtNum(v) : ''
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      layout: { padding: { top: 20, right: 12, left: 4, bottom: 4 } },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 10, boxHeight: 10, padding: 14, usePointStyle: true, font: { size: 11 }, color: '#8b97a8' }
+        },
+        tooltip: {
+          ...tooltipStyle(),
+          callbacks: {
+            label: (ctx) => `  ${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toLocaleString()}`
+          }
+        },
+        datalabels: { display: true }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: '#8b97a8', font: { size: 11 }, autoSkip: false, maxRotation: 30, minRotation: 0 }
+        },
+        ySku: {
+          position: 'left', beginAtZero: true,
+          suggestedMax: Math.max(...skuData, 1) * 1.25,
+          title: { display: true, text: 'SKUs', color: '#22d3ee', font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: '#22d3ee', font: { size: 11 }, callback: (v) => fmtNum(v) }
+        },
+        yImg: {
+          position: 'right', beginAtZero: true,
+          suggestedMax: Math.max(...imgData, 1) * 1.25,
+          title: { display: true, text: 'Distinct images', color: '#fb7185', font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
+          grid: { display: false },
+          ticks: { color: '#fb7185', font: { size: 11 }, callback: (v) => fmtNum(v) }
+        }
+      },
+      onClick: (evt, els, chart) => {
+        if (!els || !els.length) return;
+        drillGroup('seg', labels[els[0].index]);
+      }
+    }
+  });
+}
+
+// ---------- SKUs by CRM status (horizontal bar) ----------
+function renderCRM(rows) {
+  const canvas = document.getElementById('chart-crm');
+  if (!canvas) return;
+  if (!COLS.crmStatus) {
+    canvas.parentElement.innerHTML = `<div class="loading" style="color:var(--text-mute)">asks.crm_status column not found</div>`;
+    return;
+  }
+  // Distinct SKU count per crm_status
+  const map = new Map();
+  for (const r of rows) {
+    const k = r[COLS.crmStatus]; if (!k) continue;
+    if (!map.has(k)) map.set(k, new Set());
+    if (COLS.sku && r[COLS.sku]) map.get(k).add(r[COLS.sku]);
+    else map.get(k).add(Symbol());
+  }
+  const entries = [...map.entries()].map(([k,s]) => [k, s.size]).sort((a,b) => b[1] - a[1]);
   const labels = entries.map(e => e[0]);
   const data = entries.map(e => e[1]);
-  if (CHARTS.segImg) CHARTS.segImg.destroy();
-  CHARTS.segImg = new Chart(document.getElementById('chart-seg-images').getContext('2d'), {
+  if (CHARTS.crm) CHARTS.crm.destroy();
+  CHARTS.crm = new Chart(canvas.getContext('2d'), {
     type: 'bar',
     data: { labels, datasets: [{
-      label: 'Images', data,
+      label: 'SKUs', data,
       backgroundColor: labels.map((_,i) => PALETTE[i % PALETTE.length]),
-      borderRadius: 2,
+      borderRadius: 3,
       datalabels: {
-        display: true, anchor: 'end', align: 'end', color: '#e8ecf1',
-        font: { family: 'JetBrains Mono', size: 11, weight: 500 },
+        display: true, anchor: 'end', align: 'end', clamp: true,
+        color: '#e8ecf1', backgroundColor: 'rgba(11,13,16,0.78)', borderRadius: 3,
+        padding: { top: 2, bottom: 1, left: 4, right: 4 },
+        font: { family: 'JetBrains Mono', size: 10, weight: 600 },
         formatter: v => fmtNum(v)
       }
     }] },
-    options: chartOpts({
-      legend: false,
-      onClick: (label) => drillGroup('seg', label)
-    })
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { ...tooltipStyle(), callbacks: { label: (ctx) => `  ${ctx.parsed.x.toLocaleString()} SKUs` } },
+        datalabels: { display: true }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b97a8', font: { size: 11 }, callback: v => fmtNum(v) }, beginAtZero: true },
+        y: { grid: { display: false }, ticks: { color: '#8b97a8', font: { size: 11 } } }
+      },
+      onClick: (evt, els, chart) => {
+        if (!els || !els.length) return;
+        drillCRM(labels[els[0].index]);
+      }
+    }
+  });
+}
+
+// ---------- Avg TAT by enterprise (horizontal bar) ----------
+function renderTATByEnterprise(rows) {
+  const canvas = document.getElementById('chart-tat-ent');
+  if (!canvas) return;
+  if (!COLS.tat || !COLS.enterpriseName) {
+    canvas.parentElement.innerHTML = `<div class="loading" style="color:var(--text-mute)">enterprise_tat_hours or enterprise_name column not found</div>`;
+    return;
+  }
+  const map = new Map(); // ent -> { sum, n }
+  for (const r of rows) {
+    const k = r[COLS.enterpriseName]; if (!k) continue;
+    const v = r[COLS.tat]; if (v == null || v === '') continue;
+    const n = Number(v); if (isNaN(n)) continue;
+    if (!map.has(k)) map.set(k, { sum: 0, n: 0 });
+    const o = map.get(k); o.sum += n; o.n++;
+  }
+  const arr = [...map.entries()]
+    .map(([k, o]) => ({ k, avg: o.sum / o.n, n: o.n }))
+    .filter(o => o.n > 0)
+    .sort((a, b) => b.avg - a.avg)
+    .slice(0, 15);
+  const labels = arr.map(o => o.k);
+  const data = arr.map(o => o.avg);
+  const fmtH = (v) => v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+  if (CHARTS.tatEnt) CHARTS.tatEnt.destroy();
+  CHARTS.tatEnt = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{
+      label: 'Avg TAT (hrs)', data,
+      backgroundColor: '#fb7185', borderRadius: 3,
+      datalabels: {
+        display: true, anchor: 'end', align: 'end', clamp: true,
+        color: '#fda4af', backgroundColor: 'rgba(11,13,16,0.78)', borderRadius: 3,
+        padding: { top: 2, bottom: 1, left: 4, right: 4 },
+        font: { family: 'JetBrains Mono', size: 10, weight: 600 },
+        formatter: v => fmtH(v) + 'h'
+      }
+    }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { ...tooltipStyle(), callbacks: { label: (ctx) => `  Avg TAT: ${fmtH(ctx.parsed.x)} hrs (n=${arr[ctx.dataIndex].n})` } },
+        datalabels: { display: true }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b97a8', font: { size: 11 }, callback: v => fmtH(v) + 'h' }, beginAtZero: true },
+        y: { grid: { display: false }, ticks: { color: '#8b97a8', font: { size: 11 }, callback: function(v) {
+          const lbl = this.getLabelForValue(v);
+          return lbl && lbl.length > 22 ? lbl.slice(0, 20) + '…' : lbl;
+        } } }
+      },
+      onClick: (evt, els, chart) => {
+        if (!els || !els.length) return;
+        drillEntity('ent', labels[els[0].index]);
+      }
+    }
   });
 }
 
@@ -1605,12 +1839,85 @@ function drillEntity(kind, val) {
     }
   });
 }
+function drillCRM(val) {
+  if (!COLS.crmStatus) return;
+  const rows = getFilteredRows().filter(r => r[COLS.crmStatus] === val);
+  const skus = new Set();
+  for (const r of rows) if (COLS.sku && r[COLS.sku]) skus.add(r[COLS.sku]);
+  showDrill({
+    title: `CRM status · ${val}`,
+    sub: `${skus.size.toLocaleString()} distinct SKUs · ${rows.length.toLocaleString()} rows`,
+    rows
+  });
+}
 function drillKPI(which) {
   const rows = getFilteredRows();
   if (which === 'sku') {
     showDrill({ title: 'All SKUs in selected range', sub: `${rows.length.toLocaleString()} rows total`, rows });
   } else if (which === 'img') {
     showDrill({ title: 'Image volume breakdown', sub: `All rows in selected range`, rows });
+  } else if (which === 'edited') {
+    // Edited Images breakdown: per segment, enterprise, team, CRM status
+    const fmtAvg = (v) => v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+    const buildTable = (col, label) => {
+      if (!col) return null;
+      const m = new Map();
+      for (const r of rows) {
+        const k = r[col]; if (!k) continue;
+        if (!m.has(k)) m.set(k, { edited: 0, distinct: 0, skus: new Set() });
+        const o = m.get(k);
+        if (COLS.editedCount && r[COLS.editedCount]) { const n = Number(r[COLS.editedCount]); if (!isNaN(n)) o.edited += n; }
+        if (COLS.imgCount && r[COLS.imgCount]) { const n = Number(r[COLS.imgCount]); if (!isNaN(n)) o.distinct += n; }
+        if (COLS.sku && r[COLS.sku]) o.skus.add(r[COLS.sku]);
+      }
+      const arr = [...m.entries()]
+        .map(([k, o]) => ({ k, edited: o.edited, distinct: o.distinct, skus: o.skus.size,
+                            editRate: o.distinct > 0 ? (o.edited / o.distinct * 100) : 0 }))
+        .sort((a, b) => b.edited - a.edited);
+      return { label, arr };
+    };
+    showDrill({
+      title: 'Edited image volume',
+      sub: 'sum of edited_image_count · broken down by segment, enterprise, team, CRM status',
+      rows,
+      kpiEditedBreakdown: [
+        buildTable(COLS.segment, 'Segment'),
+        buildTable(COLS.enterpriseName, 'Enterprise'),
+        buildTable(COLS.teamName, 'Team'),
+        buildTable(COLS.crmStatus, 'CRM status')
+      ].filter(Boolean)
+    });
+  } else if (which === 'tat') {
+    // Avg TAT breakdown per enterprise/team/segment
+    const fmtH = (v) => v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+    const buildTAT = (col, label) => {
+      if (!col || !COLS.tat) return null;
+      const m = new Map();
+      for (const r of rows) {
+        const k = r[col]; if (!k) continue;
+        const v = r[COLS.tat]; if (v == null || v === '') continue;
+        const n = Number(v); if (isNaN(n)) continue;
+        if (!m.has(k)) m.set(k, { sum: 0, n: 0, min: Infinity, max: -Infinity, skus: new Set() });
+        const o = m.get(k);
+        o.sum += n; o.n++; if (n < o.min) o.min = n; if (n > o.max) o.max = n;
+        if (COLS.sku && r[COLS.sku]) o.skus.add(r[COLS.sku]);
+      }
+      const arr = [...m.entries()]
+        .map(([k, o]) => ({ k, avg: o.sum / o.n, n: o.n, min: o.min, max: o.max, skus: o.skus.size }))
+        .sort((a, b) => b.avg - a.avg);
+      return { label, arr };
+    };
+    showDrill({
+      title: 'Avg TAT (hrs)',
+      sub: 'mean enterprise_tat_hours · broken down by enterprise, team, segment',
+      rows,
+      kpiTATBreakdown: [
+        buildTAT(COLS.enterpriseName, 'Enterprise'),
+        buildTAT(COLS.teamName, 'Team'),
+        buildTAT(COLS.segment, 'Segment'),
+        buildTAT(COLS.crmStatus, 'CRM status')
+      ].filter(Boolean)
+    });
   } else if (which === 'avg') {
     // Per-segment + per-enterprise avg images / SKU breakdown
     const buildAvgTable = (col, label) => {
@@ -1689,7 +1996,7 @@ function drillKPI(which) {
   }
 }
 
-function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focusPOC, actionButton, kpiEntityKind, kpiAvgBreakdown }) {
+function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focusPOC, actionButton, kpiEntityKind, kpiAvgBreakdown, kpiEditedBreakdown, kpiTATBreakdown }) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-sub').textContent = sub;
   const body = document.getElementById('modal-body');
@@ -1707,7 +2014,7 @@ function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focu
   // Summary stats
   const distinctSku = new Set(), distinctCs = new Set(), distinctOb = new Set(), distinctSeg = new Set();
   const distinctEnt = new Set(), distinctTeam = new Set();
-  let imgSum = 0;
+  let imgSum = 0, editedSum = 0, tatSum = 0, tatN = 0;
   for (const r of rows) {
     if (COLS.sku && r[COLS.sku]) distinctSku.add(r[COLS.sku]);
     if (COLS.csEmail && r[COLS.csEmail]) distinctCs.add(r[COLS.csEmail]);
@@ -1716,16 +2023,25 @@ function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focu
     if (COLS.enterpriseName && r[COLS.enterpriseName]) distinctEnt.add(r[COLS.enterpriseName]);
     if (COLS.teamName && r[COLS.teamName]) distinctTeam.add(r[COLS.teamName]);
     if (COLS.imgCount && r[COLS.imgCount]) { const n = Number(r[COLS.imgCount]); if (!isNaN(n)) imgSum += n; }
+    if (COLS.editedCount && r[COLS.editedCount]) { const n = Number(r[COLS.editedCount]); if (!isNaN(n)) editedSum += n; }
+    if (COLS.tat && r[COLS.tat] != null && r[COLS.tat] !== '') {
+      const n = Number(r[COLS.tat]); if (!isNaN(n)) { tatSum += n; tatN++; }
+    }
   }
   const summary = document.createElement('div'); summary.className = 'modal-summary';
   const avgVal = distinctSku.size > 0 ? imgSum / distinctSku.size : 0;
   const avgDisplay = distinctSku.size === 0 ? '—' :
     avgVal >= 100 ? avgVal.toFixed(0) : avgVal >= 10 ? avgVal.toFixed(1) : avgVal.toFixed(2);
+  const tatAvgVal = tatN > 0 ? tatSum / tatN : 0;
+  const tatDisplay = tatN === 0 ? '—' :
+    tatAvgVal >= 100 ? tatAvgVal.toFixed(0) : tatAvgVal >= 10 ? tatAvgVal.toFixed(1) : tatAvgVal.toFixed(2);
   summary.innerHTML = `
     <div class="summary-stat"><div class="lbl">Rows</div><div class="val">${rows.length.toLocaleString()}</div></div>
     <div class="summary-stat"><div class="lbl">Distinct SKUs</div><div class="val">${fmtNum(distinctSku.size)}</div></div>
     <div class="summary-stat"><div class="lbl">Distinct Images</div><div class="val">${fmtNum(imgSum)}</div></div>
+    ${COLS.editedCount ? `<div class="summary-stat"><div class="lbl">Edited Images</div><div class="val" style="color:#c084fc">${fmtNum(editedSum)}</div></div>` : ''}
     <div class="summary-stat"><div class="lbl">Avg images / SKU</div><div class="val" style="color:var(--green)">${avgDisplay}</div></div>
+    ${COLS.tat ? `<div class="summary-stat"><div class="lbl">Avg TAT (hrs)</div><div class="val" style="color:#fb7185">${tatDisplay}</div></div>` : ''}
     <div class="summary-stat"><div class="lbl">CS POCs</div><div class="val">${fmtNum(distinctCs.size)}</div></div>
     <div class="summary-stat"><div class="lbl">OB POCs</div><div class="val">${fmtNum(distinctOb.size)}</div></div>
     ${COLS.enterpriseName ? `<div class="summary-stat"><div class="lbl">Enterprises</div><div class="val">${fmtNum(distinctEnt.size)}</div></div>` : ''}
@@ -1763,7 +2079,69 @@ function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focu
     });
   }
 
-  // ---- Entity-specific drill: day-by-day images + nested breakdowns ----
+  // ---- Edited image breakdown ----
+  if (kpiEditedBreakdown && kpiEditedBreakdown.length) {
+    kpiEditedBreakdown.forEach(({ label, arr }) => {
+      if (!arr || !arr.length) return;
+      const t = document.createElement('div'); t.className = 'modal-section-title';
+      t.textContent = `By ${label.toLowerCase()} · ${arr.length} distinct · ranked by edited image count`;
+      body.appendChild(t);
+      const tbl = document.createElement('table'); tbl.className = 'modal-table';
+      tbl.innerHTML = `<thead><tr>
+          <th>${label}</th>
+          <th style="text-align:right">SKUs</th>
+          <th style="text-align:right">Distinct images</th>
+          <th style="text-align:right">Edited images</th>
+          <th style="text-align:right">Edit rate</th>
+        </tr></thead><tbody>${arr.slice(0, 100).map(o => `
+          <tr><td>${o.k}</td>
+            <td class="num">${o.skus.toLocaleString()}</td>
+            <td class="num">${o.distinct.toLocaleString()}</td>
+            <td class="num" style="color:#c084fc">${o.edited.toLocaleString()}</td>
+            <td class="num">${o.editRate.toFixed(1)}%</td>
+          </tr>`).join('')}</tbody>`;
+      body.appendChild(tbl);
+      if (arr.length > 100) {
+        const more = document.createElement('div'); more.className = 'modal-section-title';
+        more.textContent = `Showing top 100 of ${arr.length}`;
+        body.appendChild(more);
+      }
+    });
+  }
+
+  // ---- TAT breakdown ----
+  if (kpiTATBreakdown && kpiTATBreakdown.length) {
+    const fmtH = (v) => v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+    kpiTATBreakdown.forEach(({ label, arr }) => {
+      if (!arr || !arr.length) return;
+      const t = document.createElement('div'); t.className = 'modal-section-title';
+      t.textContent = `By ${label.toLowerCase()} · ${arr.length} distinct · ranked by avg TAT`;
+      body.appendChild(t);
+      const tbl = document.createElement('table'); tbl.className = 'modal-table';
+      tbl.innerHTML = `<thead><tr>
+          <th>${label}</th>
+          <th style="text-align:right">SKUs</th>
+          <th style="text-align:right">Avg TAT (hrs)</th>
+          <th style="text-align:right">Min</th>
+          <th style="text-align:right">Max</th>
+          <th style="text-align:right">N samples</th>
+        </tr></thead><tbody>${arr.slice(0, 100).map(o => `
+          <tr><td>${o.k}</td>
+            <td class="num">${o.skus.toLocaleString()}</td>
+            <td class="num" style="color:#fb7185">${fmtH(o.avg)}</td>
+            <td class="num">${fmtH(o.min)}</td>
+            <td class="num">${fmtH(o.max)}</td>
+            <td class="num">${o.n.toLocaleString()}</td>
+          </tr>`).join('')}</tbody>`;
+      body.appendChild(tbl);
+      if (arr.length > 100) {
+        const more = document.createElement('div'); more.className = 'modal-section-title';
+        more.textContent = `Showing top 100 of ${arr.length}`;
+        body.appendChild(more);
+      }
+    });
+  }
+
   if (focusEntity) {
     // Day-by-day distinct_image_count
     if (COLS.firstImg || COLS.created) {
