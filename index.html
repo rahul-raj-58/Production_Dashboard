@@ -303,6 +303,57 @@
   .card.seg .lb-bar .fill { background: var(--violet); }
   .card.ent .lb-bar .fill { background: var(--amber); }
   .card.team .lb-bar .fill { background: var(--blue); }
+  .card.acc .lb-bar .fill { background: var(--green); }
+
+  /* CRM status breakdown — tile grid */
+  .crm-grid {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+  .crm-tile {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px 16px; cursor: pointer;
+    position: relative; transition: border-color .15s, transform .15s;
+    overflow: hidden;
+  }
+  .crm-tile:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .crm-tile::before {
+    content: ''; position: absolute; left: 0; top: 0; width: 3px; height: 100%;
+    background: var(--tile-color, var(--accent));
+  }
+  .crm-tile .status-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .crm-tile .sku-count {
+    font-family: 'Fraunces', serif; font-size: 32px; line-height: 1;
+    font-weight: 500; letter-spacing: -0.02em; color: var(--text);
+  }
+  .crm-tile .pct-bar {
+    height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px;
+    margin: 10px 0 8px; overflow: hidden;
+  }
+  .crm-tile .pct-bar-fill {
+    height: 100%; background: var(--tile-color, var(--accent));
+    border-radius: 2px; transition: width .3s;
+  }
+  .crm-tile .pct-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    color: var(--text-mute);
+  }
+  .crm-tile .sub-stats {
+    display: flex; gap: 14px; margin-top: 8px; flex-wrap: wrap;
+    font-size: 11px; color: var(--text-dim);
+  }
+  .crm-tile .sub-stats .stat .v {
+    font-family: 'JetBrains Mono', monospace; color: var(--text); font-weight: 600; font-size: 12px;
+  }
+  .crm-tile .sub-stats .stat .l {
+    display: block; font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-mute);
+    margin-top: 2px;
+  }
 
   /* ============ MODAL ============ */
   .modal-backdrop {
@@ -696,24 +747,44 @@
       <div class="chart-wrap"><canvas id="chart-seg-donut"></canvas></div>
     </div>
 
-    <div class="card span-6 crm">
+    <div class="card span-12 crm">
       <div class="card-head">
         <div>
-          <h3>SKUs by CRM status</h3>
-          <div class="sub">ai.sku_id count grouped by asks.crm_status · click bar to drill</div>
+          <h3>CRM status breakdown</h3>
+          <div class="sub">SKU distribution + image volume by asks.crm_status · click any tile or bar to drill</div>
         </div>
       </div>
-      <div class="chart-wrap tall"><canvas id="chart-crm"></canvas></div>
+      <div id="crm-grid" class="crm-grid"></div>
     </div>
 
-    <div class="card span-6 tat">
+    <div class="card span-6 acc">
       <div class="card-head">
         <div>
-          <h3>Avg TAT by enterprise</h3>
-          <div class="sub">mean enterprise_tat_hours · top 15 · click bar to drill</div>
+          <h3>Top enterprises by AI accuracy</h3>
+          <div class="sub">100 − ((images − edited) / images × 100) · top 15 · click to drill</div>
+        </div>
+        <div class="controls">
+          <button class="toggle active" data-acc-ent-view="chart">Chart</button>
+          <button class="toggle" data-acc-ent-view="list">List</button>
         </div>
       </div>
-      <div class="chart-wrap tall"><canvas id="chart-tat-ent"></canvas></div>
+      <div class="chart-wrap tall" id="acc-ent-chart-wrap"><canvas id="chart-acc-ent"></canvas></div>
+      <div class="leaderboard" id="lb-acc-ent" style="display:none; max-height: 420px;"></div>
+    </div>
+
+    <div class="card span-6 acc">
+      <div class="card-head">
+        <div>
+          <h3>Top teams by AI accuracy</h3>
+          <div class="sub">end.team_name · same formula · top 15 · click to drill</div>
+        </div>
+        <div class="controls">
+          <button class="toggle active" data-acc-team-view="chart">Chart</button>
+          <button class="toggle" data-acc-team-view="list">List</button>
+        </div>
+      </div>
+      <div class="chart-wrap tall" id="acc-team-chart-wrap"><canvas id="chart-acc-team"></canvas></div>
+      <div class="leaderboard" id="lb-acc-team" style="display:none; max-height: 420px;"></div>
     </div>
 
   </section>
@@ -1024,7 +1095,8 @@ function applyAndRender() {
   renderSegmentDonut(rows);
   renderSegmentImages(rows);
   renderCRM(rows);
-  renderTATByEnterprise(rows);
+  renderAccuracy('ent', rows);
+  renderAccuracy('team', rows);
   renderTopByImages('ent', rows);
   renderTopByImages('team', rows);
 }
@@ -1459,118 +1531,166 @@ function renderSegmentImages(rows) {
   });
 }
 
-// ---------- SKUs by CRM status (horizontal bar) ----------
+// ---------- CRM status breakdown (tile grid) ----------
 function renderCRM(rows) {
-  const canvas = document.getElementById('chart-crm');
-  if (!canvas) return;
+  const grid = document.getElementById('crm-grid');
+  if (!grid) return;
   if (!COLS.crmStatus) {
-    canvas.parentElement.innerHTML = `<div class="loading" style="color:var(--text-mute)">asks.crm_status column not found</div>`;
+    grid.innerHTML = `<div class="loading" style="color:var(--text-mute);min-height:60px">asks.crm_status column not found</div>`;
     return;
   }
-  // Distinct SKU count per crm_status
+  // Aggregate per status: distinct SKUs, total images, edited images
   const map = new Map();
   for (const r of rows) {
     const k = r[COLS.crmStatus]; if (!k) continue;
-    if (!map.has(k)) map.set(k, new Set());
-    if (COLS.sku && r[COLS.sku]) map.get(k).add(r[COLS.sku]);
-    else map.get(k).add(Symbol());
+    if (!map.has(k)) map.set(k, { skus: new Set(), images: 0, edited: 0, rows: 0 });
+    const o = map.get(k);
+    o.rows++;
+    if (COLS.sku && r[COLS.sku]) o.skus.add(r[COLS.sku]);
+    if (COLS.imgCount && r[COLS.imgCount]) { const n = Number(r[COLS.imgCount]); if (!isNaN(n)) o.images += n; }
+    if (COLS.editedCount && r[COLS.editedCount]) { const n = Number(r[COLS.editedCount]); if (!isNaN(n)) o.edited += n; }
   }
-  const entries = [...map.entries()].map(([k,s]) => [k, s.size]).sort((a,b) => b[1] - a[1]);
-  const labels = entries.map(e => e[0]);
-  const data = entries.map(e => e[1]);
-  if (CHARTS.crm) CHARTS.crm.destroy();
-  CHARTS.crm = new Chart(canvas.getContext('2d'), {
-    type: 'bar',
-    data: { labels, datasets: [{
-      label: 'SKUs', data,
-      backgroundColor: labels.map((_,i) => PALETTE[i % PALETTE.length]),
-      borderRadius: 3,
-      datalabels: {
-        display: true, anchor: 'end', align: 'end', clamp: true,
-        color: '#e8ecf1', backgroundColor: 'rgba(11,13,16,0.78)', borderRadius: 3,
-        padding: { top: 2, bottom: 1, left: 4, right: 4 },
-        font: { family: 'JetBrains Mono', size: 10, weight: 600 },
-        formatter: v => fmtNum(v)
-      }
-    }] },
-    options: {
-      indexAxis: 'y',
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { ...tooltipStyle(), callbacks: { label: (ctx) => `  ${ctx.parsed.x.toLocaleString()} SKUs` } },
-        datalabels: { display: true }
-      },
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b97a8', font: { size: 11 }, callback: v => fmtNum(v) }, beginAtZero: true },
-        y: { grid: { display: false }, ticks: { color: '#8b97a8', font: { size: 11 } } }
-      },
-      onClick: (evt, els, chart) => {
-        if (!els || !els.length) return;
-        drillCRM(labels[els[0].index]);
-      }
-    }
+  const entries = [...map.entries()]
+    .map(([k, o]) => ({ k, skus: o.skus.size, images: o.images, edited: o.edited, rows: o.rows }))
+    .sort((a, b) => b.skus - a.skus);
+  const totalSkus = entries.reduce((s, e) => s + e.skus, 0) || 1;
+  grid.innerHTML = '';
+  entries.forEach((e, i) => {
+    const color = PALETTE[i % PALETTE.length];
+    const pct = (e.skus / totalSkus * 100);
+    const editRate = e.images > 0 ? (e.edited / e.images * 100) : 0;
+    const tile = document.createElement('div');
+    tile.className = 'crm-tile';
+    tile.style.setProperty('--tile-color', color);
+    tile.title = `Click to drill into "${e.k}"`;
+    tile.innerHTML = `
+      <div class="status-label" style="color:${color}">${e.k}</div>
+      <div class="sku-count">${fmtNum(e.skus)}</div>
+      <div class="pct-bar"><div class="pct-bar-fill" style="width:${pct}%"></div></div>
+      <div class="pct-label">${pct.toFixed(1)}% of SKUs</div>
+      <div class="sub-stats">
+        <div class="stat"><div class="v">${fmtNum(e.images)}</div><div class="l">Images</div></div>
+        ${COLS.editedCount ? `<div class="stat"><div class="v">${fmtNum(e.edited)}</div><div class="l">Edited</div></div>` : ''}
+        ${COLS.editedCount && COLS.imgCount ? `<div class="stat"><div class="v">${editRate.toFixed(1)}%</div><div class="l">Edit rate</div></div>` : ''}
+      </div>
+    `;
+    tile.addEventListener('click', () => drillCRM(e.k));
+    grid.appendChild(tile);
   });
+  if (entries.length === 0) {
+    grid.innerHTML = `<div class="loading" style="color:var(--text-mute);min-height:60px">No CRM data in current filter</div>`;
+  }
 }
 
-// ---------- Avg TAT by enterprise (horizontal bar) ----------
-function renderTATByEnterprise(rows) {
-  const canvas = document.getElementById('chart-tat-ent');
+// ---------- AI Accuracy by enterprise / team ----------
+// Formula per group: 100 - ((sum_images - sum_edited) / sum_images * 100)
+// Equivalent to: (sum_edited / sum_images) * 100 — i.e. % of images that were edited.
+// (Per user spec: this is the dashboard's "AI accuracy" metric.)
+const ACC_VIEW = { ent: 'chart', team: 'chart' };
+function renderAccuracy(kind, rows) {
+  const col = kind === 'ent' ? COLS.enterpriseName : COLS.teamName;
+  const canvas = document.getElementById(kind === 'ent' ? 'chart-acc-ent' : 'chart-acc-team');
+  const lbEl = document.getElementById(kind === 'ent' ? 'lb-acc-ent' : 'lb-acc-team');
+  const chartWrap = document.getElementById(kind === 'ent' ? 'acc-ent-chart-wrap' : 'acc-team-chart-wrap');
   if (!canvas) return;
-  if (!COLS.tat || !COLS.enterpriseName) {
-    canvas.parentElement.innerHTML = `<div class="loading" style="color:var(--text-mute)">enterprise_tat_hours or enterprise_name column not found</div>`;
+  if (!col || !COLS.imgCount || !COLS.editedCount) {
+    chartWrap.innerHTML = `<div class="loading" style="color:var(--text-mute)">Required column missing (need ${kind === 'ent' ? 'enterprise_name' : 'end.team_name'}, distinct_image_count, edited_image_count)</div>`;
+    lbEl.innerHTML = '';
     return;
   }
-  const map = new Map(); // ent -> { sum, n }
+  // Aggregate
+  const map = new Map();
   for (const r of rows) {
-    const k = r[COLS.enterpriseName]; if (!k) continue;
-    const v = r[COLS.tat]; if (v == null || v === '') continue;
-    const n = Number(v); if (isNaN(n)) continue;
-    if (!map.has(k)) map.set(k, { sum: 0, n: 0 });
-    const o = map.get(k); o.sum += n; o.n++;
+    const k = r[col]; if (!k) continue;
+    if (!map.has(k)) map.set(k, { images: 0, edited: 0, skus: new Set() });
+    const o = map.get(k);
+    const ni = Number(r[COLS.imgCount]); if (!isNaN(ni)) o.images += ni;
+    const ne = Number(r[COLS.editedCount]); if (!isNaN(ne)) o.edited += ne;
+    if (COLS.sku && r[COLS.sku]) o.skus.add(r[COLS.sku]);
   }
-  const arr = [...map.entries()]
-    .map(([k, o]) => ({ k, avg: o.sum / o.n, n: o.n }))
-    .filter(o => o.n > 0)
-    .sort((a, b) => b.avg - a.avg)
-    .slice(0, 15);
-  const labels = arr.map(o => o.k);
-  const data = arr.map(o => o.avg);
-  const fmtH = (v) => v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
-  if (CHARTS.tatEnt) CHARTS.tatEnt.destroy();
-  CHARTS.tatEnt = new Chart(canvas.getContext('2d'), {
-    type: 'bar',
-    data: { labels, datasets: [{
-      label: 'Avg TAT (hrs)', data,
-      backgroundColor: '#fb7185', borderRadius: 3,
-      datalabels: {
-        display: true, anchor: 'end', align: 'end', clamp: true,
-        color: '#fda4af', backgroundColor: 'rgba(11,13,16,0.78)', borderRadius: 3,
-        padding: { top: 2, bottom: 1, left: 4, right: 4 },
-        font: { family: 'JetBrains Mono', size: 10, weight: 600 },
-        formatter: v => fmtH(v) + 'h'
+  // Only include groups with at least 1 image to avoid divide-by-zero
+  const arrAll = [...map.entries()]
+    .map(([k, o]) => ({
+      k,
+      images: o.images,
+      edited: o.edited,
+      skus: o.skus.size,
+      accuracy: o.images > 0 ? (100 - ((o.images - o.edited) / o.images * 100)) : 0
+    }))
+    .filter(o => o.images > 0)
+    .sort((a, b) => b.accuracy - a.accuracy);
+
+  const TOP_N = 15;
+  const top = arrAll.slice(0, TOP_N);
+  const labels = top.map(o => o.k);
+  const data = top.map(o => o.accuracy);
+  const accentColor = '#7fdc6a';
+  const fmtAcc = (v) => v.toFixed(1) + '%';
+
+  const view = ACC_VIEW[kind];
+
+  if (view === 'chart') {
+    chartWrap.style.display = ''; lbEl.style.display = 'none';
+    if (CHARTS['acc_' + kind]) CHARTS['acc_' + kind].destroy();
+    CHARTS['acc_' + kind] = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [{
+        label: 'AI accuracy', data,
+        backgroundColor: accentColor, borderRadius: 3,
+        datalabels: {
+          display: true, anchor: 'end', align: 'end', clamp: true,
+          color: '#bbf7d0', backgroundColor: 'rgba(11,13,16,0.78)', borderRadius: 3,
+          padding: { top: 2, bottom: 1, left: 4, right: 4 },
+          font: { family: 'JetBrains Mono', size: 10, weight: 600 },
+          formatter: v => fmtAcc(v)
+        }
+      }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { ...tooltipStyle(), callbacks: { label: (ctx) => {
+            const o = top[ctx.dataIndex];
+            return [
+              `  AI accuracy: ${fmtAcc(ctx.parsed.x)}`,
+              `  Edited / Images: ${o.edited.toLocaleString()} / ${o.images.toLocaleString()}`,
+              `  SKUs: ${o.skus.toLocaleString()}`
+            ];
+          } } },
+          datalabels: { display: true }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' },
+               ticks: { color: '#8b97a8', font: { size: 11 }, callback: v => fmtAcc(v) },
+               beginAtZero: true, max: 100 },
+          y: { grid: { display: false }, ticks: { color: '#8b97a8', font: { size: 11 }, callback: function(v) {
+            const lbl = this.getLabelForValue(v);
+            return lbl && lbl.length > 22 ? lbl.slice(0, 20) + '…' : lbl;
+          } } }
+        },
+        onClick: (evt, els, chart) => {
+          if (!els || !els.length) return;
+          drillAccuracy(kind, labels[els[0].index]);
+        }
       }
-    }] },
-    options: {
-      indexAxis: 'y',
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { ...tooltipStyle(), callbacks: { label: (ctx) => `  Avg TAT: ${fmtH(ctx.parsed.x)} hrs (n=${arr[ctx.dataIndex].n})` } },
-        datalabels: { display: true }
-      },
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b97a8', font: { size: 11 }, callback: v => fmtH(v) + 'h' }, beginAtZero: true },
-        y: { grid: { display: false }, ticks: { color: '#8b97a8', font: { size: 11 }, callback: function(v) {
-          const lbl = this.getLabelForValue(v);
-          return lbl && lbl.length > 22 ? lbl.slice(0, 20) + '…' : lbl;
-        } } }
-      },
-      onClick: (evt, els, chart) => {
-        if (!els || !els.length) return;
-        drillEntity('ent', labels[els[0].index]);
-      }
-    }
+    });
+  }
+
+  // List view (and always build the leaderboard data structure)
+  lbEl.innerHTML = '';
+  if (view === 'list') { chartWrap.style.display = 'none'; lbEl.style.display = 'flex'; }
+  arrAll.slice(0, 50).forEach((o, i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row';
+    row.title = `${o.k} — ${o.edited.toLocaleString()} edited of ${o.images.toLocaleString()} images`;
+    row.innerHTML = `
+      <div class="lb-rank">${String(i+1).padStart(2,'0')}</div>
+      <div class="lb-name">${o.k}</div>
+      <div class="lb-bar"><div class="fill" style="width:${o.accuracy}%"></div><span class="num">${fmtAcc(o.accuracy)}</span></div>
+    `;
+    row.addEventListener('click', () => drillAccuracy(kind, o.k));
+    lbEl.appendChild(row);
   });
 }
 
@@ -1848,6 +1968,35 @@ function drillCRM(val) {
     title: `CRM status · ${val}`,
     sub: `${skus.size.toLocaleString()} distinct SKUs · ${rows.length.toLocaleString()} rows`,
     rows
+  });
+}
+function drillAccuracy(kind, val) {
+  const col = kind === 'ent' ? COLS.enterpriseName : COLS.teamName;
+  const label = kind === 'ent' ? 'Enterprise' : 'Team';
+  const rows = getFilteredRows().filter(r => r[col] === val);
+  // Calculate accuracy for the header sub
+  let images = 0, edited = 0;
+  for (const r of rows) {
+    if (COLS.imgCount && r[COLS.imgCount]) { const n = Number(r[COLS.imgCount]); if (!isNaN(n)) images += n; }
+    if (COLS.editedCount && r[COLS.editedCount]) { const n = Number(r[COLS.editedCount]); if (!isNaN(n)) edited += n; }
+  }
+  const accuracy = images > 0 ? (100 - ((images - edited) / images * 100)) : 0;
+  const filterSet = kind === 'ent' ? filters.enterprises : filters.teams;
+  const isActive = filterSet.has(val);
+  showDrill({
+    title: `${label} · ${val}`,
+    sub: `AI accuracy: ${accuracy.toFixed(2)}% · ${edited.toLocaleString()} edited of ${images.toLocaleString()} images`,
+    rows,
+    focusEntity: { kind, val },
+    actionButton: {
+      label: isActive ? `✕ Remove "${val}" filter` : `⤓ Apply as dashboard filter`,
+      onClick: () => {
+        if (isActive) filterSet.delete(val);
+        else { filterSet.clear(); filterSet.add(val); }
+        closeModal();
+        applyAndRender();
+      }
+    }
   });
 }
 function drillKPI(which) {
@@ -2394,6 +2543,18 @@ document.querySelectorAll('[data-trend-series]').forEach(btn => {
       btn.classList.add('active');
       TOP_VIEW[kind] = btn.getAttribute(attr);
       renderTopByImages(kind, getFilteredRows());
+    });
+  });
+});
+// Accuracy chart/list toggles
+['ent','team'].forEach(kind => {
+  const attr = `data-acc-${kind}-view`;
+  document.querySelectorAll(`[${attr}]`).forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(`[${attr}]`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ACC_VIEW[kind] = btn.getAttribute(attr);
+      renderAccuracy(kind, getFilteredRows());
     });
   });
 });
