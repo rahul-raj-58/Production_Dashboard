@@ -559,12 +559,16 @@
     <div class="card span-12">
       <div class="card-head">
         <div>
-          <h3>Day-wise AI SKU trend</h3>
-          <div class="sub">ai.sku_id count · grouped by day · click any bar to drill</div>
+          <h3>Day-wise SKU & image trend</h3>
+          <div class="sub">ai.sku_id count + distinct images · grouped by day · click to drill</div>
         </div>
         <div class="controls">
+          <button class="toggle active" data-trend-series="both">SKUs + Images</button>
+          <button class="toggle" data-trend-series="sku">SKUs only</button>
+          <button class="toggle" data-trend-series="img">Images only</button>
+          <span style="width:14px"></span>
           <button class="toggle active" data-trend="total">Total</button>
-          <button class="toggle" data-trend="ma">7-day moving avg</button>
+          <button class="toggle" data-trend="ma">7-day MA</button>
         </div>
       </div>
       <div class="chart-wrap tall"><canvas id="chart-trend"></canvas></div>
@@ -692,20 +696,6 @@
       <div class="leaderboard" id="lb-team" style="display:none; max-height: 420px;"></div>
     </div>
 
-    <div class="card span-12">
-      <div class="card-head">
-        <div>
-          <h3>Distinct image count</h3>
-          <div class="sub">by first_image_created_on (day) · click bar to drill</div>
-        </div>
-        <div class="controls">
-          <button class="toggle active" data-img="bar">Bars</button>
-          <button class="toggle" data-img="area">Area</button>
-        </div>
-      </div>
-      <div class="chart-wrap tall"><canvas id="chart-img"></canvas></div>
-    </div>
-
   </section>
 
   <div class="status-bar" id="status-bar">Awaiting data fetch…</div>
@@ -760,7 +750,7 @@ const filters = {
   enterprises: new Set(),
   teams: new Set()
 };
-const state = { trendMode: 'total', modeCs: 'stacked', modeOb: 'stacked', modeSeg: 'stacked', imgMode: 'bar' };
+const state = { trendMode: 'total', trendSeries: 'both', modeCs: 'stacked', modeOb: 'stacked', modeSeg: 'stacked', imgMode: 'bar' };
 
 // ============================================================
 // HELPERS
@@ -1012,7 +1002,6 @@ function applyAndRender() {
   renderSegmentImages(rows);
   renderTopByImages('ent', rows);
   renderTopByImages('team', rows);
-  renderImages(rows);
 }
 
 function renderActiveFilters() {
@@ -1060,7 +1049,7 @@ function renderKPIs(rows) {
   document.getElementById('kpi-ob').textContent  = fmtNum(obSet.size);
 }
 
-// ---------- Day-wise trend ----------
+// ---------- Day-wise combined trend (SKUs + Images, dual-axis) ----------
 function aggregateSKUByDay(rows, dateCol) {
   const map = new Map();
   for (const r of rows) {
@@ -1070,42 +1059,143 @@ function aggregateSKUByDay(rows, dateCol) {
     if (COLS.sku && r[COLS.sku]) map.get(day).add(r[COLS.sku]);
     else map.get(day).add(Symbol());
   }
-  const days = [...map.keys()].sort();
-  return { days, counts: days.map(d => map.get(d).size) };
+  return map;
+}
+function aggregateImagesByDay(rows, dateCol) {
+  const map = new Map();
+  for (const r of rows) {
+    const day = parseDateKey(r[dateCol]);
+    if (!day) continue;
+    const n = COLS.imgCount && r[COLS.imgCount] != null ? (Number(r[COLS.imgCount]) || 0) : 0;
+    map.set(day, (map.get(day) || 0) + n);
+  }
+  return map;
 }
 function renderTrend(rows) {
   if (!COLS.created) return;
-  const { days, counts } = aggregateSKUByDay(rows, COLS.created);
+
+  // SKU map keyed by created_at
+  const skuMap = aggregateSKUByDay(rows, COLS.created);
+  // Image map keyed by first_image_created_on if available, otherwise by created_at
+  const imgDateCol = COLS.firstImg || COLS.created;
+  const imgMap = aggregateImagesByDay(rows, imgDateCol);
+
+  // Union of all days from both series, sorted ascending
+  const daySet = new Set([...skuMap.keys(), ...imgMap.keys()]);
+  const days = [...daySet].sort();
+  const skuCounts = days.map(d => skuMap.has(d) ? skuMap.get(d).size : 0);
+  const imgCounts = days.map(d => imgMap.get(d) || 0);
+  const skuMA = movingAvg(skuCounts, 7);
+  const imgMA = movingAvg(imgCounts, 7);
+
   if (CHARTS.trend) CHARTS.trend.destroy();
-  const ma7 = movingAvg(counts, 7);
   const ctx = document.getElementById('chart-trend').getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, 0, 360);
-  grad.addColorStop(0, 'rgba(255,91,31,0.45)');
-  grad.addColorStop(1, 'rgba(255,91,31,0.00)');
+
+  const skuGrad = ctx.createLinearGradient(0, 0, 0, 420);
+  skuGrad.addColorStop(0, 'rgba(255,91,31,0.35)');
+  skuGrad.addColorStop(1, 'rgba(255,91,31,0.00)');
+
+  const showSkuTotal = state.trendSeries !== 'img' && state.trendMode === 'total';
+  const showSkuMA    = state.trendSeries !== 'img' && state.trendMode === 'ma';
+  const showImgBars  = state.trendSeries !== 'sku' && state.trendMode === 'total';
+  const showImgMA    = state.trendSeries !== 'sku' && state.trendMode === 'ma';
+
   CHARTS.trend = new Chart(ctx, {
-    type: 'line',
     data: {
       labels: days,
       datasets: [
+        // Image bars on right axis
         {
-          label: 'SKUs / day', data: counts, borderColor: '#ff5b1f', backgroundColor: grad,
-          fill: true, tension: 0.3, pointRadius: days.length < 60 ? 3 : 0, pointHoverRadius: 6,
-          borderWidth: 2, hidden: state.trendMode === 'ma',
+          type: 'bar', label: 'Distinct images / day', data: imgCounts,
+          backgroundColor: 'rgba(157,123,255,0.55)', borderColor: 'rgba(157,123,255,1)',
+          borderWidth: 0, yAxisID: 'yImg', order: 2,
+          hidden: !showImgBars,
           datalabels: {
-            display: (ctx) => days.length <= 40,
-            align: 'top', anchor: 'end', color: '#e8ecf1',
+            display: (ctx) => days.length <= 30,
+            anchor: 'end', align: 'end', color: '#c084fc',
+            font: { family: 'JetBrains Mono', size: 9, weight: 500 },
+            formatter: v => v > 0 ? fmtNum(v) : ''
+          }
+        },
+        // SKU line on left axis
+        {
+          type: 'line', label: 'SKUs / day', data: skuCounts,
+          borderColor: '#ff5b1f', backgroundColor: skuGrad, fill: true,
+          tension: 0.3, pointRadius: days.length < 60 ? 3 : 0, pointHoverRadius: 6,
+          borderWidth: 2.5, yAxisID: 'ySku', order: 1,
+          hidden: !showSkuTotal,
+          datalabels: {
+            display: (ctx) => days.length <= 30,
+            align: 'top', anchor: 'end', color: '#ff8a5b',
             font: { family: 'JetBrains Mono', size: 10, weight: 500 },
             formatter: (v) => v > 0 ? v : ''
           }
         },
+        // 7-day moving averages
         {
-          label: '7-day moving avg', data: ma7, borderColor: '#36d1b7',
-          borderDash: [4,4], borderWidth: 2, fill: false, tension: 0.3, pointRadius: 0,
-          hidden: state.trendMode === 'total', datalabels: { display: false }
+          type: 'line', label: 'SKUs · 7-day MA', data: skuMA,
+          borderColor: '#ff5b1f', borderDash: [4,4], borderWidth: 2,
+          fill: false, tension: 0.3, pointRadius: 0, yAxisID: 'ySku', order: 0,
+          hidden: !showSkuMA, datalabels: { display: false }
+        },
+        {
+          type: 'line', label: 'Images · 7-day MA', data: imgMA,
+          borderColor: '#9d7bff', borderDash: [4,4], borderWidth: 2,
+          fill: false, tension: 0.3, pointRadius: 0, yAxisID: 'yImg', order: 0,
+          hidden: !showImgMA, datalabels: { display: false }
         }
       ]
     },
-    options: chartOpts({ timeAxis: true, onClick: (label) => drillDay(label) })
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 10, boxHeight: 10, padding: 14, usePointStyle: true, font: { size: 11 }, color: '#8b97a8' }
+        },
+        tooltip: {
+          ...tooltipStyle(),
+          callbacks: {
+            title: (items) => items[0]?.label || '',
+            label: (ctx) => `  ${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toLocaleString()}`
+          }
+        },
+        datalabels: { display: false }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'day', tooltipFormat: 'MMM d, yyyy', displayFormats: { day: 'MMM d' } },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#8b97a8', font: { size: 11 }, maxRotation: 0, autoSkipPadding: 14 }
+        },
+        ySku: {
+          position: 'left', beginAtZero: true,
+          title: { display: true, text: 'SKUs', color: '#ff8a5b', font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          ticks: { color: '#ff8a5b', font: { size: 11 }, callback: (v) => fmtNum(v) }
+        },
+        yImg: {
+          position: 'right', beginAtZero: true,
+          title: { display: true, text: 'Distinct images', color: '#c084fc', font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
+          grid: { display: false },
+          ticks: { color: '#c084fc', font: { size: 11 }, callback: (v) => fmtNum(v) }
+        }
+      },
+      onClick: (evt, els, chart) => {
+        if (!els || !els.length) return;
+        const el = els[0];
+        const label = chart.data.labels[el.index];
+        const dsLabel = chart.data.datasets[el.datasetIndex]?.label || '';
+        // Pick the right drill: image bar -> drill by first_image_created_on; otherwise by created_at
+        if (dsLabel.toLowerCase().startsWith('images') || dsLabel.toLowerCase().startsWith('distinct images')) {
+          drillImageDay(label);
+        } else {
+          drillDay(label);
+        }
+      }
+    }
   });
 }
 
@@ -1826,11 +1916,15 @@ document.querySelectorAll('[data-trend]').forEach(btn => {
     document.querySelectorAll('[data-trend]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     state.trendMode = btn.dataset.trend;
-    if (CHARTS.trend) {
-      CHARTS.trend.data.datasets[0].hidden = state.trendMode === 'ma';
-      CHARTS.trend.data.datasets[1].hidden = state.trendMode === 'total';
-      CHARTS.trend.update();
-    }
+    renderTrend(getFilteredRows());
+  });
+});
+document.querySelectorAll('[data-trend-series]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-trend-series]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.trendSeries = btn.dataset.trendSeries;
+    renderTrend(getFilteredRows());
   });
 });
 ['cs','ob','seg'].forEach(kind => {
@@ -1842,14 +1936,6 @@ document.querySelectorAll('[data-trend]').forEach(btn => {
       state[key] = btn.dataset[`mode${kind.charAt(0).toUpperCase() + kind.slice(1)}`];
       renderByGroup(kind, getFilteredRows());
     });
-  });
-});
-document.querySelectorAll('[data-img]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('[data-img]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    state.imgMode = btn.dataset.img;
-    renderImages(getFilteredRows());
   });
 });
 ['ent','team'].forEach(kind => {
