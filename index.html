@@ -193,7 +193,7 @@
   .clear-all:hover { color: var(--accent); border-color: var(--accent); }
 
   /* ============ KPI ============ */
-  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 22px; }
   .kpi {
     background: var(--bg-card); border: 1px solid var(--border);
     padding: 20px 22px; border-radius: 6px; position: relative; overflow: hidden;
@@ -206,6 +206,8 @@
   .kpi:nth-child(2)::before { background: var(--teal); }
   .kpi:nth-child(3)::before { background: var(--violet); }
   .kpi:nth-child(4)::before { background: var(--amber); }
+  .kpi:nth-child(5)::before { background: var(--blue); }
+  .kpi:nth-child(6)::before { background: var(--pink); }
   .kpi .label {
     font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
     text-transform: uppercase; color: var(--text-mute); margin-bottom: 12px;
@@ -395,6 +397,9 @@
   @media (max-width: 900px) {
     .filter-bar { grid-template-columns: repeat(2, 1fr); }
   }
+  @media (max-width: 1500px) {
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  }
   @media (max-width: 1100px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
     .card.span-8, .card.span-6, .card.span-4 { grid-column: span 12; }
@@ -550,6 +555,18 @@
       <div class="label">OB POCs</div>
       <div class="value" id="kpi-ob">—</div>
       <div class="sub" id="kpi-ob-sub">unique owners</div>
+    </div>
+    <div class="kpi" data-drill="ent">
+      <div class="drill-hint">click to drill ↗</div>
+      <div class="label">Enterprises</div>
+      <div class="value" id="kpi-ent">—</div>
+      <div class="sub" id="kpi-ent-sub">unique enterprise_name</div>
+    </div>
+    <div class="kpi" data-drill="team">
+      <div class="drill-hint">click to drill ↗</div>
+      <div class="label">Teams</div>
+      <div class="value" id="kpi-team">—</div>
+      <div class="sub" id="kpi-team-sub">unique end.team_name</div>
     </div>
   </section>
 
@@ -993,18 +1010,22 @@ function renderActiveFilters() {
 }
 
 function renderKPIs(rows) {
-  const skus = new Set(), csSet = new Set(), obSet = new Set();
+  const skus = new Set(), csSet = new Set(), obSet = new Set(), entSet = new Set(), teamSet = new Set();
   let imgSum = 0;
   for (const r of rows) {
     if (COLS.sku && r[COLS.sku]) skus.add(r[COLS.sku]);
     if (COLS.csEmail && r[COLS.csEmail]) csSet.add(r[COLS.csEmail]);
     if (COLS.obEmail && r[COLS.obEmail]) obSet.add(r[COLS.obEmail]);
+    if (COLS.enterpriseName && r[COLS.enterpriseName]) entSet.add(r[COLS.enterpriseName]);
+    if (COLS.teamName && r[COLS.teamName]) teamSet.add(r[COLS.teamName]);
     if (COLS.imgCount && r[COLS.imgCount]) { const n = Number(r[COLS.imgCount]); if (!isNaN(n)) imgSum += n; }
   }
   document.getElementById('kpi-sku').textContent = fmtNum(skus.size);
   document.getElementById('kpi-img').textContent = fmtNum(imgSum);
   document.getElementById('kpi-cs').textContent  = fmtNum(csSet.size);
   document.getElementById('kpi-ob').textContent  = fmtNum(obSet.size);
+  document.getElementById('kpi-ent').textContent = COLS.enterpriseName ? fmtNum(entSet.size) : '—';
+  document.getElementById('kpi-team').textContent = COLS.teamName ? fmtNum(teamSet.size) : '—';
 }
 
 // ---------- Day-wise combined trend (SKUs + Images, dual-axis) ----------
@@ -1590,10 +1611,37 @@ function drillKPI(which) {
     }
     const table = [...counts.entries()].map(([k, s]) => ({ key: k, count: s.size })).sort((a,b) => b.count - a.count);
     showDrill({ title: 'OB POCs', sub: `${table.length} unique OB POCs`, rows, customTable: { headers: ['OB POC Email', 'SKUs'], rows: table.map(r => [r.key, r.count]) } });
+  } else if (which === 'ent' || which === 'team') {
+    const col = which === 'ent' ? COLS.enterpriseName : COLS.teamName;
+    const label = which === 'ent' ? 'Enterprise' : 'Team';
+    if (!col) {
+      showDrill({ title: `${label}s`, sub: `Column not found in CSV`, rows });
+      return;
+    }
+    const m = new Map();
+    for (const r of rows) {
+      const k = r[col]; if (!k) continue;
+      const n = COLS.imgCount ? (Number(r[COLS.imgCount]) || 0) : 0;
+      if (!m.has(k)) m.set(k, { images: 0, skus: new Set() });
+      const o = m.get(k);
+      o.images += n;
+      if (COLS.sku && r[COLS.sku]) o.skus.add(r[COLS.sku]);
+    }
+    const table = [...m.entries()].sort((a,b) => b[1].images - a[1].images);
+    showDrill({
+      title: `${label}s`,
+      sub: `${table.length} unique ${label.toLowerCase()}${table.length === 1 ? '' : 's'} · click any row to filter the dashboard`,
+      rows,
+      customTable: {
+        headers: [label, 'Distinct images', 'SKUs'],
+        rows: table.map(([k, o]) => [k, fmtNum(o.images), fmtNum(o.skus.size)])
+      },
+      kpiEntityKind: which // tell showDrill these rows are clickable entity filters
+    });
   }
 }
 
-function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focusPOC, actionButton }) {
+function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focusPOC, actionButton, kpiEntityKind }) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-sub').textContent = sub;
   const body = document.getElementById('modal-body');
@@ -1803,12 +1851,34 @@ function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focu
     title.textContent = 'Breakdown';
     body.appendChild(title);
     const tbl = document.createElement('table'); tbl.className = 'modal-table';
-    tbl.innerHTML = `<thead><tr>${customTable.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-      <tbody>${customTable.rows.slice(0, 200).map(r => `<tr><td>${r[0]}</td><td class="num">${r[1]}</td></tr>`).join('')}</tbody>`;
+    const renderRow = (r) => {
+      // First cell is the label; remaining cells get the .num style for right-aligned monospace.
+      const cells = r.map((cell, idx) => idx === 0 ? `<td>${cell}</td>` : `<td class="num">${cell}</td>`).join('');
+      return `<tr data-entity="${(r[0] ?? '').toString().replace(/"/g, '&quot;')}" style="${kpiEntityKind ? 'cursor:pointer' : ''}">${cells}</tr>`;
+    };
+    tbl.innerHTML = `<thead><tr>${customTable.headers.map((h, i) => `<th${i === 0 ? '' : ' style="text-align:right"'}>${h}</th>`).join('')}</tr></thead>
+      <tbody>${customTable.rows.slice(0, 500).map(renderRow).join('')}</tbody>`;
     body.appendChild(tbl);
-    if (customTable.rows.length > 200) {
+
+    // Make rows clickable when this is an enterprise/team KPI drill
+    if (kpiEntityKind === 'ent' || kpiEntityKind === 'team') {
+      tbl.querySelectorAll('tbody tr').forEach(tr => {
+        tr.addEventListener('click', () => {
+          const val = tr.getAttribute('data-entity');
+          const fs = kpiEntityKind === 'ent' ? filters.enterprises : filters.teams;
+          fs.clear(); fs.add(val);
+          closeModal();
+          populateFilterOptions();
+          applyAndRender();
+        });
+        tr.addEventListener('mouseenter', () => tr.style.background = 'var(--bg-elev)');
+        tr.addEventListener('mouseleave', () => tr.style.background = '');
+      });
+    }
+
+    if (customTable.rows.length > 500) {
       const more = document.createElement('div'); more.className = 'modal-section-title';
-      more.textContent = `Showing first 200 of ${customTable.rows.length} rows`;
+      more.textContent = `Showing first 500 of ${customTable.rows.length} rows`;
       body.appendChild(more);
     }
   } else {
