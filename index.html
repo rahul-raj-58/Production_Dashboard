@@ -292,15 +292,15 @@
     </div>
   </section>
 
-  <section class="file-fallback" id="file-fallback">
-    <h4>Browser blocked the direct Metabase fetch (CORS)</h4>
-    <p>The Metabase public link works in your browser tab, but JavaScript on another page can't read it directly. Drop the CSV here, pick it from your computer, or open this page from a folder that contains <code style="color:var(--text);font-family:'JetBrains Mono',monospace;">data.csv</code> — the dashboard will load instantly.</p>
+  <section class="file-fallback visible" id="file-fallback">
+    <h4>Load your CSV to populate the dashboard</h4>
+    <p>The Metabase public link can't be read by browser JavaScript directly (CORS policy). Two ways to get the data in — both take seconds:</p>
     <div class="actions">
-      <label class="file-btn" for="csv-input">Choose CSV file…</label>
+      <label class="file-btn" for="csv-input">↑ Upload CSV file</label>
       <input type="file" id="csv-input" accept=".csv,text/csv" />
       <a class="dl" href="https://metabase.spyne.ai/public/question/d5777560-dcd6-427f-a8c1-e745c4d24aa6.csv" target="_blank" rel="noopener">↓ Download CSV from Metabase</a>
     </div>
-    <div class="hint">↳ or drag &amp; drop the CSV anywhere on this page</div>
+    <div class="hint">↳ Or drag &amp; drop the CSV anywhere on this page. Once loaded, this panel disappears.</div>
   </section>
 
   <section class="kpi-row">
@@ -494,16 +494,36 @@ let CHARTS = {};          // chart instances
 // ============================================================
 // FETCH + PARSE
 // ============================================================
+async function fetchWithTimeout(url, ms = 6000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { cache: 'no-store', signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchData() {
   setStatus('Fetching CSV…');
   document.getElementById('refresh-btn').disabled = true;
+  document.getElementById('status-pill').textContent = 'Loading';
+
+  // If we're opened from file:// the local "./data.csv" relative fetch will
+  // still work in some browsers but cross-origin to metabase.spyne.ai will
+  // definitely fail. Build the candidate list accordingly.
+  const isFileProto = location.protocol === 'file:';
+  const candidates = isFileProto
+    ? ["./data.csv"]                              // skip Metabase — CORS guaranteed to fail
+    : ["./data.csv", "https://metabase.spyne.ai/public/question/d5777560-dcd6-427f-a8c1-e745c4d24aa6.csv"];
+
   let text = null, lastErr = null, sourceUsed = null;
-  for (const url of CSV_URLS) {
+  for (const url of candidates) {
     try {
       setStatus(`Trying ${url} …`);
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      text = await res.text();
+      text = await fetchWithTimeout(url, 6000);
       sourceUsed = url;
       break;
     } catch (e) {
@@ -511,7 +531,25 @@ async function fetchData() {
       lastErr = e;
     }
   }
-  if (!text) throw lastErr || new Error('All sources failed');
+
+  if (!text) {
+    // Auto-fetch failed — show the file picker prominently and stop.
+    document.getElementById('refresh-btn').disabled = false;
+    document.getElementById('file-fallback').classList.add('visible');
+    document.getElementById('status-pill').textContent = 'Awaiting CSV';
+    document.querySelectorAll('.loading').forEach(el => {
+      el.textContent = 'WAITING FOR CSV · use panel above';
+      el.style.color = '#ff7070';
+    });
+    const reason = isFileProto
+      ? 'Page opened from file:// — browser blocks cross-origin fetches. Use the orange panel above to load the CSV (or run a local server).'
+      : `Auto-fetch failed (${lastErr?.message || 'CORS / network'}). Use the orange panel above to load your CSV.`;
+    setStatus(reason, true);
+    // Scroll the picker into view so the user sees it
+    document.getElementById('file-fallback').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
   try {
     const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
     if (parsed.errors && parsed.errors.length) {
@@ -532,21 +570,14 @@ async function fetchData() {
       setStatus(`⚠ Could not resolve ai.sku_id column. Headers seen: ${headers.join(', ')}`, true);
     }
     render();
+    document.getElementById('file-fallback').classList.remove('visible');
     setStatus(`Loaded ${DATA.length.toLocaleString()} rows from ${sourceUsed} · resolved cols → ${Object.entries(COLS).filter(([k,v])=>v).map(([k,v])=>`${k}=${v}`).join(', ')}`);
     document.getElementById('status-pill').textContent = 'Live';
     document.getElementById('footer-stamp').textContent = 'updated ' + new Date().toLocaleString();
   } catch (e) {
     console.error(e);
-    setStatus(
-      `Auto-fetch failed: ${e.message}. Use the orange panel above to load your CSV.`,
-      true
-    );
-    document.getElementById('file-fallback').classList.add('visible');
-    document.getElementById('status-pill').textContent = 'Offline';
-    document.querySelectorAll('.loading').forEach(el => {
-      el.textContent = 'FETCH FAILED · see status bar';
-      el.style.color = '#ff7070';
-    });
+    setStatus('Failed to parse CSV: ' + e.message, true);
+    document.getElementById('status-pill').textContent = 'Error';
   } finally {
     document.getElementById('refresh-btn').disabled = false;
   }
