@@ -80,6 +80,42 @@
   .meta button:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,91,31,0.35); }
   .meta button:disabled { opacity: 0.5; cursor: wait; }
 
+  .file-fallback {
+    display: none;
+    margin: 0 0 28px;
+    padding: 22px 24px;
+    background: linear-gradient(180deg, rgba(255,91,31,0.08), rgba(255,91,31,0.02));
+    border: 1px dashed var(--accent);
+    border-radius: 6px;
+  }
+  .file-fallback.visible { display: block; }
+  .file-fallback.drag { background: rgba(255,91,31,0.15); }
+  .file-fallback h4 {
+    margin: 0 0 8px; font-family: 'Fraunces', serif; font-weight: 500;
+    font-size: 22px; color: var(--text); letter-spacing: -0.01em;
+  }
+  .file-fallback p {
+    margin: 0 0 16px; color: var(--text-dim); font-size: 13px; line-height: 1.6; max-width: 720px;
+  }
+  .file-fallback .actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .file-fallback .file-btn {
+    display: inline-block; padding: 10px 18px; background: var(--accent); color: #fff;
+    border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 13px;
+    border: none; transition: transform .15s, box-shadow .15s;
+  }
+  .file-fallback .file-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,91,31,0.35); }
+  .file-fallback a.dl {
+    color: var(--text); font-size: 13px; text-decoration: none;
+    padding: 10px 16px; border: 1px solid var(--border-strong); border-radius: 4px;
+    transition: border-color .15s;
+  }
+  .file-fallback a.dl:hover { border-color: var(--accent); }
+  .file-fallback input[type="file"] { display: none; }
+  .file-fallback .hint {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--text-mute); margin-top: 14px; letter-spacing: 0.04em;
+  }
+
   main { padding: 28px 36px 60px; max-width: 1700px; margin: 0 auto; }
 
   .hero {
@@ -256,6 +292,17 @@
     </div>
   </section>
 
+  <section class="file-fallback" id="file-fallback">
+    <h4>Browser blocked the direct Metabase fetch (CORS)</h4>
+    <p>The Metabase public link works in your browser tab, but JavaScript on another page can't read it directly. Drop the CSV here, pick it from your computer, or open this page from a folder that contains <code style="color:var(--text);font-family:'JetBrains Mono',monospace;">data.csv</code> — the dashboard will load instantly.</p>
+    <div class="actions">
+      <label class="file-btn" for="csv-input">Choose CSV file…</label>
+      <input type="file" id="csv-input" accept=".csv,text/csv" />
+      <a class="dl" href="https://metabase.spyne.ai/public/question/d5777560-dcd6-427f-a8c1-e745c4d24aa6.csv" target="_blank" rel="noopener">↓ Download CSV from Metabase</a>
+    </div>
+    <div class="hint">↳ or drag &amp; drop the CSV anywhere on this page</div>
+  </section>
+
   <section class="kpi-row">
     <div class="kpi">
       <div class="label">Total AI SKUs</div>
@@ -371,7 +418,12 @@
 // ============================================================
 // CONFIG
 // ============================================================
-const CSV_URL = "https://metabase.spyne.ai/public/question/d5777560-dcd6-427f-a8c1-e745c4d24aa6.csv";
+// Tries each URL in order until one succeeds.
+// Put a local "data.csv" next to this HTML for the most reliable experience.
+const CSV_URLS = [
+  "./data.csv",
+  "https://metabase.spyne.ai/public/question/d5777560-dcd6-427f-a8c1-e745c4d24aa6.csv"
+];
 
 const PALETTE = ['#ff5b1f','#36d1b7','#9d7bff','#f5b942','#ff5d9e','#4ea1ff','#7fdc6a','#ffa15c','#c084fc','#34d399'];
 
@@ -443,12 +495,24 @@ let CHARTS = {};          // chart instances
 // FETCH + PARSE
 // ============================================================
 async function fetchData() {
-  setStatus('Fetching CSV from Metabase…');
+  setStatus('Fetching CSV…');
   document.getElementById('refresh-btn').disabled = true;
+  let text = null, lastErr = null, sourceUsed = null;
+  for (const url of CSV_URLS) {
+    try {
+      setStatus(`Trying ${url} …`);
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      text = await res.text();
+      sourceUsed = url;
+      break;
+    } catch (e) {
+      console.warn('Fetch failed for', url, e);
+      lastErr = e;
+    }
+  }
+  if (!text) throw lastErr || new Error('All sources failed');
   try {
-    const res = await fetch(CSV_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
     const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
     if (parsed.errors && parsed.errors.length) {
       console.warn('Parse warnings:', parsed.errors.slice(0, 3));
@@ -468,15 +532,16 @@ async function fetchData() {
       setStatus(`⚠ Could not resolve ai.sku_id column. Headers seen: ${headers.join(', ')}`, true);
     }
     render();
-    setStatus(`Loaded ${DATA.length.toLocaleString()} rows · ${headers.length} columns · resolved cols → ${Object.entries(COLS).filter(([k,v])=>v).map(([k,v])=>`${k}=${v}`).join(', ')}`);
+    setStatus(`Loaded ${DATA.length.toLocaleString()} rows from ${sourceUsed} · resolved cols → ${Object.entries(COLS).filter(([k,v])=>v).map(([k,v])=>`${k}=${v}`).join(', ')}`);
     document.getElementById('status-pill').textContent = 'Live';
     document.getElementById('footer-stamp').textContent = 'updated ' + new Date().toLocaleString();
   } catch (e) {
     console.error(e);
     setStatus(
-      `Failed to fetch CSV: ${e.message}. If this is a CORS error, open this HTML in a context that has access to Metabase, or download the CSV and replace CSV_URL with a local path.`,
+      `Auto-fetch failed: ${e.message}. Use the orange panel above to load your CSV.`,
       true
     );
+    document.getElementById('file-fallback').classList.add('visible');
     document.getElementById('status-pill').textContent = 'Offline';
     document.querySelectorAll('.loading').forEach(el => {
       el.textContent = 'FETCH FAILED · see status bar';
@@ -840,6 +905,60 @@ document.querySelectorAll('[data-img]').forEach(btn => {
 });
 
 document.getElementById('refresh-btn').addEventListener('click', fetchData);
+
+// ---------- File picker fallback ----------
+function loadFromText(text, sourceLabel) {
+  try {
+    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
+    DATA = parsed.data;
+    const headers = parsed.meta.fields || [];
+    COLS = {
+      sku:      pickCol(headers, ['ai.sku_id','sku_id','ai_sku_id','sku id']),
+      created:  pickCol(headers, ['created_at','created_on','sku_created_on','day','date']),
+      csEmail:  pickCol(headers, ['cs_poc_email','cs_email','cs poc email']),
+      obEmail:  pickCol(headers, ['ob_poc_email','ob_email','ob poc email']),
+      imgCount: pickCol(headers, ['distinct_image_count','image_count','distinct image count']),
+      firstImg: pickCol(headers, ['first_image_created_on','first_image_created_at','first_image_created'])
+    };
+    render();
+    document.getElementById('file-fallback').classList.remove('visible');
+    document.getElementById('status-pill').textContent = 'Live';
+    setStatus(`Loaded ${DATA.length.toLocaleString()} rows from ${sourceLabel} · resolved cols → ${Object.entries(COLS).filter(([k,v])=>v).map(([k,v])=>`${k}=${v}`).join(', ')}`);
+    document.getElementById('footer-stamp').textContent = 'updated ' + new Date().toLocaleString();
+  } catch (e) {
+    setStatus('Failed to parse CSV: ' + e.message, true);
+  }
+}
+
+document.getElementById('csv-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => loadFromText(ev.target.result, file.name);
+  reader.readAsText(file);
+});
+
+// Drag and drop anywhere on the page
+const fallbackEl = document.getElementById('file-fallback');
+['dragenter','dragover'].forEach(ev => {
+  window.addEventListener(ev, (e) => {
+    e.preventDefault(); e.stopPropagation();
+    fallbackEl.classList.add('visible','drag');
+  });
+});
+['dragleave','drop'].forEach(ev => {
+  window.addEventListener(ev, (e) => {
+    e.preventDefault(); e.stopPropagation();
+    fallbackEl.classList.remove('drag');
+  });
+});
+window.addEventListener('drop', (e) => {
+  const file = e.dataTransfer?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => loadFromText(ev.target.result, file.name);
+  reader.readAsText(file);
+});
 
 // kick off
 fetchData();
