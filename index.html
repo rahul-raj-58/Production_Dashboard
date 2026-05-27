@@ -560,7 +560,7 @@
       <div class="card-head">
         <div>
           <h3>Day-wise SKU & image trend</h3>
-          <div class="sub">ai.sku_id count + distinct images · grouped by day · click to drill</div>
+          <div class="sub">ai.sku_id count + distinct images · grouped by day · click any point to drill</div>
         </div>
         <div class="controls">
           <button class="toggle active" data-trend-series="both">SKUs + Images</button>
@@ -572,98 +572,6 @@
         </div>
       </div>
       <div class="chart-wrap tall"><canvas id="chart-trend"></canvas></div>
-    </div>
-
-    <div class="card span-8">
-      <div class="card-head">
-        <div>
-          <h3>SKUs by CS POC over time</h3>
-          <div class="sub">stacked daily contribution · top 8 · click segment to drill</div>
-        </div>
-        <div class="controls">
-          <button class="toggle active" data-mode-cs="stacked">Stacked</button>
-          <button class="toggle" data-mode-cs="line">Lines</button>
-        </div>
-      </div>
-      <div class="chart-wrap tall"><canvas id="chart-cs"></canvas></div>
-    </div>
-
-    <div class="card span-4 cs">
-      <div class="card-head">
-        <div>
-          <h3>CS POC leaderboard</h3>
-          <div class="sub">total SKUs · click row to drill</div>
-        </div>
-      </div>
-      <div class="leaderboard" id="lb-cs"></div>
-    </div>
-
-    <div class="card span-8 ob">
-      <div class="card-head">
-        <div>
-          <h3>SKUs by OB POC over time</h3>
-          <div class="sub">stacked daily contribution · top 8 · click segment to drill</div>
-        </div>
-        <div class="controls">
-          <button class="toggle active" data-mode-ob="stacked">Stacked</button>
-          <button class="toggle" data-mode-ob="line">Lines</button>
-        </div>
-      </div>
-      <div class="chart-wrap tall"><canvas id="chart-ob"></canvas></div>
-    </div>
-
-    <div class="card span-4 ob">
-      <div class="card-head">
-        <div>
-          <h3>OB POC leaderboard</h3>
-          <div class="sub">total SKUs · click row to drill</div>
-        </div>
-      </div>
-      <div class="leaderboard" id="lb-ob"></div>
-    </div>
-
-    <div class="card span-8 seg">
-      <div class="card-head">
-        <div>
-          <h3>SKUs by customer segment over time</h3>
-          <div class="sub">stacked daily contribution · click segment to drill</div>
-        </div>
-        <div class="controls">
-          <button class="toggle active" data-mode-seg="stacked">Stacked</button>
-          <button class="toggle" data-mode-seg="line">Lines</button>
-        </div>
-      </div>
-      <div class="chart-wrap tall"><canvas id="chart-seg"></canvas></div>
-    </div>
-
-    <div class="card span-4 seg">
-      <div class="card-head">
-        <div>
-          <h3>Segment leaderboard</h3>
-          <div class="sub">total SKUs · click row to drill</div>
-        </div>
-      </div>
-      <div class="leaderboard" id="lb-seg"></div>
-    </div>
-
-    <div class="card span-6">
-      <div class="card-head">
-        <div>
-          <h3>Segment share</h3>
-          <div class="sub">distribution of SKUs · click slice to drill</div>
-        </div>
-      </div>
-      <div class="chart-wrap"><canvas id="chart-seg-donut"></canvas></div>
-    </div>
-
-    <div class="card span-6">
-      <div class="card-head">
-        <div>
-          <h3>Images per segment</h3>
-          <div class="sub">sum of distinct_image_count · click bar to drill</div>
-        </div>
-      </div>
-      <div class="chart-wrap"><canvas id="chart-seg-images"></canvas></div>
     </div>
 
     <div class="card span-6 ent">
@@ -694,6 +602,56 @@
       </div>
       <div class="chart-wrap tall" id="team-chart-wrap"><canvas id="chart-team"></canvas></div>
       <div class="leaderboard" id="lb-team" style="display:none; max-height: 420px;"></div>
+    </div>
+
+    <div class="card span-4 cs">
+      <div class="card-head">
+        <div>
+          <h3>CS POC leaderboard</h3>
+          <div class="sub">total SKUs · click row to drill</div>
+        </div>
+      </div>
+      <div class="leaderboard" id="lb-cs"></div>
+    </div>
+
+    <div class="card span-4 ob">
+      <div class="card-head">
+        <div>
+          <h3>OB POC leaderboard</h3>
+          <div class="sub">total SKUs · click row to drill</div>
+        </div>
+      </div>
+      <div class="leaderboard" id="lb-ob"></div>
+    </div>
+
+    <div class="card span-4 seg">
+      <div class="card-head">
+        <div>
+          <h3>Segment leaderboard</h3>
+          <div class="sub">total SKUs · click row to drill</div>
+        </div>
+      </div>
+      <div class="leaderboard" id="lb-seg"></div>
+    </div>
+
+    <div class="card span-6">
+      <div class="card-head">
+        <div>
+          <h3>Segment share</h3>
+          <div class="sub">distribution of SKUs · click slice to drill</div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-seg-donut"></canvas></div>
+    </div>
+
+    <div class="card span-6">
+      <div class="card-head">
+        <div>
+          <h3>Images per segment</h3>
+          <div class="sub">sum of distinct_image_count · click bar to drill</div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-seg-images"></canvas></div>
     </div>
 
   </section>
@@ -1091,57 +1049,77 @@ function renderTrend(rows) {
   if (CHARTS.trend) CHARTS.trend.destroy();
   const ctx = document.getElementById('chart-trend').getContext('2d');
 
+  // Color palette — high-contrast cyan vs coral, both readable on dark bg
+  const SKU_COLOR = '#22d3ee';      // bright cyan
+  const SKU_GLOW  = '#67e8f9';      // lighter cyan for labels
+  const IMG_COLOR = '#fb7185';      // coral / warm rose
+  const IMG_GLOW  = '#fda4af';      // softer coral for labels
+
   const skuGrad = ctx.createLinearGradient(0, 0, 0, 420);
-  skuGrad.addColorStop(0, 'rgba(255,91,31,0.35)');
-  skuGrad.addColorStop(1, 'rgba(255,91,31,0.00)');
+  skuGrad.addColorStop(0, 'rgba(34,211,238,0.28)');
+  skuGrad.addColorStop(1, 'rgba(34,211,238,0.00)');
+  const imgGrad = ctx.createLinearGradient(0, 0, 0, 420);
+  imgGrad.addColorStop(0, 'rgba(251,113,133,0.22)');
+  imgGrad.addColorStop(1, 'rgba(251,113,133,0.00)');
 
   const showSkuTotal = state.trendSeries !== 'img' && state.trendMode === 'total';
   const showSkuMA    = state.trendSeries !== 'img' && state.trendMode === 'ma';
-  const showImgBars  = state.trendSeries !== 'sku' && state.trendMode === 'total';
+  const showImgTotal = state.trendSeries !== 'sku' && state.trendMode === 'total';
   const showImgMA    = state.trendSeries !== 'sku' && state.trendMode === 'ma';
 
+  // Decide label density: show all if ≤25 days, every other if 26-50, every Nth otherwise
+  const labelStride = days.length <= 25 ? 1 : days.length <= 50 ? 2 : days.length <= 90 ? 4 : Math.ceil(days.length / 20);
+  const labelDisplay = (color) => ({
+    display: (c) => {
+      const v = c.dataset.data[c.dataIndex];
+      if (!v) return false;
+      return c.dataIndex % labelStride === 0;
+    },
+    align: 'top', anchor: 'end',
+    color: color,
+    backgroundColor: 'rgba(11,13,16,0.7)',
+    borderRadius: 3,
+    padding: { top: 3, bottom: 2, left: 5, right: 5 },
+    font: { family: 'JetBrains Mono', size: 10, weight: 600 },
+    formatter: (v) => v > 0 ? fmtNum(v) : ''
+  });
+
   CHARTS.trend = new Chart(ctx, {
+    type: 'line',
     data: {
       labels: days,
       datasets: [
-        // Image bars on right axis
+        // SKUs · left axis · cyan line
         {
-          type: 'bar', label: 'Distinct images / day', data: imgCounts,
-          backgroundColor: 'rgba(157,123,255,0.55)', borderColor: 'rgba(157,123,255,1)',
-          borderWidth: 0, yAxisID: 'yImg', order: 2,
-          hidden: !showImgBars,
-          datalabels: {
-            display: (ctx) => days.length <= 30,
-            anchor: 'end', align: 'end', color: '#c084fc',
-            font: { family: 'JetBrains Mono', size: 9, weight: 500 },
-            formatter: v => v > 0 ? fmtNum(v) : ''
-          }
-        },
-        // SKU line on left axis
-        {
-          type: 'line', label: 'SKUs / day', data: skuCounts,
-          borderColor: '#ff5b1f', backgroundColor: skuGrad, fill: true,
-          tension: 0.3, pointRadius: days.length < 60 ? 3 : 0, pointHoverRadius: 6,
-          borderWidth: 2.5, yAxisID: 'ySku', order: 1,
+          label: 'SKUs / day', data: skuCounts,
+          borderColor: SKU_COLOR, backgroundColor: skuGrad, fill: true,
+          tension: 0.35, pointRadius: 4, pointHoverRadius: 7,
+          pointBackgroundColor: SKU_COLOR, pointBorderColor: '#0b0d10', pointBorderWidth: 2,
+          borderWidth: 2.5, yAxisID: 'ySku', order: 2,
           hidden: !showSkuTotal,
-          datalabels: {
-            display: (ctx) => days.length <= 30,
-            align: 'top', anchor: 'end', color: '#ff8a5b',
-            font: { family: 'JetBrains Mono', size: 10, weight: 500 },
-            formatter: (v) => v > 0 ? v : ''
-          }
+          datalabels: labelDisplay(SKU_GLOW)
+        },
+        // Distinct images · right axis · coral line
+        {
+          label: 'Distinct images / day', data: imgCounts,
+          borderColor: IMG_COLOR, backgroundColor: imgGrad, fill: true,
+          tension: 0.35, pointRadius: 4, pointHoverRadius: 7,
+          pointBackgroundColor: IMG_COLOR, pointBorderColor: '#0b0d10', pointBorderWidth: 2,
+          borderWidth: 2.5, yAxisID: 'yImg', order: 1,
+          hidden: !showImgTotal,
+          datalabels: { ...labelDisplay(IMG_GLOW), align: 'bottom', anchor: 'start' }
         },
         // 7-day moving averages
         {
-          type: 'line', label: 'SKUs · 7-day MA', data: skuMA,
-          borderColor: '#ff5b1f', borderDash: [4,4], borderWidth: 2,
-          fill: false, tension: 0.3, pointRadius: 0, yAxisID: 'ySku', order: 0,
+          label: 'SKUs · 7-day MA', data: skuMA,
+          borderColor: SKU_COLOR, borderDash: [6,5], borderWidth: 2,
+          fill: false, tension: 0.3, pointRadius: 0, yAxisID: 'ySku', order: 3,
           hidden: !showSkuMA, datalabels: { display: false }
         },
         {
-          type: 'line', label: 'Images · 7-day MA', data: imgMA,
-          borderColor: '#9d7bff', borderDash: [4,4], borderWidth: 2,
-          fill: false, tension: 0.3, pointRadius: 0, yAxisID: 'yImg', order: 0,
+          label: 'Images · 7-day MA', data: imgMA,
+          borderColor: IMG_COLOR, borderDash: [6,5], borderWidth: 2,
+          fill: false, tension: 0.3, pointRadius: 0, yAxisID: 'yImg', order: 4,
           hidden: !showImgMA, datalabels: { display: false }
         }
       ]
@@ -1149,6 +1127,7 @@ function renderTrend(rows) {
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
+      layout: { padding: { top: 24, right: 12, left: 4, bottom: 4 } },
       plugins: {
         legend: {
           position: 'bottom',
@@ -1172,15 +1151,15 @@ function renderTrend(rows) {
         },
         ySku: {
           position: 'left', beginAtZero: true,
-          title: { display: true, text: 'SKUs', color: '#ff8a5b', font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
-          grid: { color: 'rgba(255,255,255,0.06)' },
-          ticks: { color: '#ff8a5b', font: { size: 11 }, callback: (v) => fmtNum(v) }
+          title: { display: true, text: 'SKUs', color: SKU_COLOR, font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: SKU_COLOR, font: { size: 11 }, callback: (v) => fmtNum(v) }
         },
         yImg: {
           position: 'right', beginAtZero: true,
-          title: { display: true, text: 'Distinct images', color: '#c084fc', font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
+          title: { display: true, text: 'Distinct images', color: IMG_COLOR, font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
           grid: { display: false },
-          ticks: { color: '#c084fc', font: { size: 11 }, callback: (v) => fmtNum(v) }
+          ticks: { color: IMG_COLOR, font: { size: 11 }, callback: (v) => fmtNum(v) }
         }
       },
       onClick: (evt, els, chart) => {
@@ -1188,8 +1167,7 @@ function renderTrend(rows) {
         const el = els[0];
         const label = chart.data.labels[el.index];
         const dsLabel = chart.data.datasets[el.datasetIndex]?.label || '';
-        // Pick the right drill: image bar -> drill by first_image_created_on; otherwise by created_at
-        if (dsLabel.toLowerCase().startsWith('images') || dsLabel.toLowerCase().startsWith('distinct images')) {
+        if (dsLabel.toLowerCase().includes('image')) {
           drillImageDay(label);
         } else {
           drillDay(label);
@@ -1199,86 +1177,30 @@ function renderTrend(rows) {
   });
 }
 
-// ---------- Group rendering (cs / ob / seg) ----------
+// ---------- Group leaderboard rendering (cs / ob / seg) ----------
+// The accompanying time-series charts have been removed; this just builds the leaderboards.
 function renderByGroup(kind, rows) {
   let col;
   if (kind === 'cs') col = COLS.csEmail;
   else if (kind === 'ob') col = COLS.obEmail;
   else col = COLS.segment;
-  if (!col || !COLS.created) {
-    const canvas = document.getElementById(kind === 'cs' ? 'chart-cs' : kind === 'ob' ? 'chart-ob' : 'chart-seg');
-    const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width, canvas.height);
-    return;
-  }
+  if (!col) return;
 
-  const byDay = new Map();
-  for (const r of rows) {
-    const day = parseDateKey(r[COLS.created]);
-    const grp = r[col];
-    if (!day || !grp) continue;
-    const sku = COLS.sku ? r[COLS.sku] : Symbol();
-    if (!byDay.has(day)) byDay.set(day, new Map());
-    if (!byDay.get(day).has(grp)) byDay.get(day).set(grp, new Set());
-    byDay.get(day).get(grp).add(sku);
-  }
-
+  // Aggregate distinct SKUs per group (no date dimension needed)
   const distinctPerGrp = new Map();
-  for (const [, m] of byDay) {
-    for (const [g, set] of m) {
-      if (!distinctPerGrp.has(g)) distinctPerGrp.set(g, new Set());
-      for (const s of set) distinctPerGrp.get(g).add(s);
-    }
+  for (const r of rows) {
+    const grp = r[col]; if (!grp) continue;
+    if (!distinctPerGrp.has(grp)) distinctPerGrp.set(grp, new Set());
+    distinctPerGrp.get(grp).add(COLS.sku ? r[COLS.sku] : Symbol());
   }
   const totals = [...distinctPerGrp.entries()].map(([g, s]) => [g, s.size]).sort((a,b) => b[1] - a[1]);
 
-  const TOP = 8;
-  const topGrps = totals.slice(0, TOP).map(t => t[0]);
-  const otherGrps = totals.slice(TOP).map(t => t[0]);
-  const days = [...byDay.keys()].sort();
-
-  const datasets = topGrps.map((g, i) => ({
-    label: g.length > 28 ? g.slice(0,26) + '…' : g,
-    fullLabel: g,
-    data: days.map(d => (byDay.get(d).get(g)?.size) || 0),
-    backgroundColor: PALETTE[i % PALETTE.length],
-    borderColor: PALETTE[i % PALETTE.length],
-    borderWidth: 0, stack: 'a', tension: 0.3, pointRadius: 0, fill: true
-  }));
-  if (otherGrps.length) {
-    datasets.push({
-      label: `Other (${otherGrps.length})`, fullLabel: `Other (${otherGrps.length})`,
-      data: days.map(d => otherGrps.reduce((sum, g) => sum + ((byDay.get(d).get(g)?.size) || 0), 0)),
-      backgroundColor: '#3a4555', borderColor: '#3a4555',
-      borderWidth: 0, stack: 'a', tension: 0.3, pointRadius: 0, fill: true
-    });
-  }
-
-  const canvasId = kind === 'cs' ? 'chart-cs' : kind === 'ob' ? 'chart-ob' : 'chart-seg';
-  const key = kind;
-  const modeKey = kind === 'cs' ? 'modeCs' : kind === 'ob' ? 'modeOb' : 'modeSeg';
-  const mode = state[modeKey];
-
-  if (CHARTS[key]) CHARTS[key].destroy();
-  CHARTS[key] = new Chart(document.getElementById(canvasId).getContext('2d'), {
-    type: mode === 'stacked' ? 'bar' : 'line',
-    data: { labels: days, datasets: datasets.map(d => ({...d, fill: mode === 'stacked'})) },
-    options: chartOpts({
-      timeAxis: true, stacked: mode === 'stacked', legend: true,
-      onClick: (label, datasetLabel, datasetIdx) => {
-        const ds = datasets[datasetIdx];
-        if (!ds) return drillDay(label);
-        const grpVal = ds.fullLabel;
-        if (grpVal && grpVal.startsWith('Other (')) return drillDay(label);
-        drillGroupDay(kind, grpVal, label);
-      }
-    })
-  });
-
   // Leaderboard
   const lbEl = document.getElementById(kind === 'cs' ? 'lb-cs' : kind === 'ob' ? 'lb-ob' : 'lb-seg');
+  if (!lbEl) return;
   lbEl.innerHTML = '';
   const max = totals[0]?.[1] || 1;
-  totals.slice(0, 25).forEach(([g, count], i) => {
+  totals.slice(0, 50).forEach(([g, count], i) => {
     const row = document.createElement('div');
     row.className = 'lb-row';
     row.title = g;
@@ -1466,6 +1388,8 @@ function renderTopByImages(kind, rows) {
 
 // ---------- Image trend ----------
 function renderImages(rows) {
+  const canvas = document.getElementById('chart-img');
+  if (!canvas) return; // standalone image card has been merged into the trend chart
   if (!COLS.firstImg) return;
   const map = new Map();
   for (const r of rows) {
@@ -1925,17 +1849,6 @@ document.querySelectorAll('[data-trend-series]').forEach(btn => {
     btn.classList.add('active');
     state.trendSeries = btn.dataset.trendSeries;
     renderTrend(getFilteredRows());
-  });
-});
-['cs','ob','seg'].forEach(kind => {
-  document.querySelectorAll(`[data-mode-${kind}]`).forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll(`[data-mode-${kind}]`).forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const key = kind === 'cs' ? 'modeCs' : kind === 'ob' ? 'modeOb' : 'modeSeg';
-      state[key] = btn.dataset[`mode${kind.charAt(0).toUpperCase() + kind.slice(1)}`];
-      renderByGroup(kind, getFilteredRows());
-    });
   });
 });
 ['ent','team'].forEach(kind => {
