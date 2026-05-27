@@ -1067,21 +1067,22 @@ function renderTrend(rows) {
   const showImgTotal = state.trendSeries !== 'sku' && state.trendMode === 'total';
   const showImgMA    = state.trendSeries !== 'sku' && state.trendMode === 'ma';
 
-  // Decide label density: show all if ≤25 days, every other if 26-50, every Nth otherwise
-  const labelStride = days.length <= 25 ? 1 : days.length <= 50 ? 2 : days.length <= 90 ? 4 : Math.ceil(days.length / 20);
+  // Show a number on every data point. The datalabels plugin's built-in collision
+  // detection will hide labels that physically overlap, so dense ranges still degrade gracefully.
   const labelDisplay = (color) => ({
     display: (c) => {
       const v = c.dataset.data[c.dataIndex];
-      if (!v) return false;
-      return c.dataIndex % labelStride === 0;
+      return v > 0;
     },
     align: 'top', anchor: 'end',
     color: color,
-    backgroundColor: 'rgba(11,13,16,0.7)',
+    backgroundColor: 'rgba(11,13,16,0.78)',
     borderRadius: 3,
-    padding: { top: 3, bottom: 2, left: 5, right: 5 },
-    font: { family: 'JetBrains Mono', size: 10, weight: 600 },
-    formatter: (v) => v > 0 ? fmtNum(v) : ''
+    padding: { top: 2, bottom: 1, left: 4, right: 4 },
+    font: { family: 'JetBrains Mono', size: 9, weight: 600 },
+    formatter: (v) => v > 0 ? fmtNum(v) : '',
+    clamp: true,
+    clip: false
   });
 
   CHARTS.trend = new Chart(ctx, {
@@ -1151,12 +1152,17 @@ function renderTrend(rows) {
         },
         ySku: {
           position: 'left', beginAtZero: true,
+          // Headroom above the peak so labels sit comfortably below the top of the chart
+          suggestedMax: Math.max(...skuCounts, 1) * 1.25,
           title: { display: true, text: 'SKUs', color: SKU_COLOR, font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
           grid: { color: 'rgba(255,255,255,0.05)' },
           ticks: { color: SKU_COLOR, font: { size: 11 }, callback: (v) => fmtNum(v) }
         },
         yImg: {
           position: 'right', beginAtZero: true,
+          // Much higher ceiling so the image line sits in the lower half of the chart,
+          // visually separated from the SKU line. ~2.2× pushes it down without flattening it.
+          suggestedMax: Math.max(...imgCounts, 1) * 2.2,
           title: { display: true, text: 'Distinct images', color: IMG_COLOR, font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
           grid: { display: false },
           ticks: { color: IMG_COLOR, font: { size: 11 }, callback: (v) => fmtNum(v) }
