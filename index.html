@@ -2,356 +2,370 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Live Analytics — Spyne</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Spyne · AI SKU & Image Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <style>
   :root {
-    --ink: #15130f;
-    --ink-soft: #3a342b;
-    --paper: #f5f1e8;
-    --paper-warm: #ede7d6;
-    --rule: #15130f;
-    --accent: #c8410b;
-    --accent-soft: #e88a4a;
-    --muted: #8a8474;
-    --grid: rgba(21, 19, 15, 0.08);
-    --serif: 'Fraunces', Georgia, serif;
-    --sans: 'Inter Tight', system-ui, sans-serif;
-    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --bg: #0b0d10;
+    --bg-elev: #11151a;
+    --bg-card: #141a21;
+    --border: #1f2730;
+    --border-strong: #2a3440;
+    --text: #e8ecf1;
+    --text-dim: #8b97a8;
+    --text-mute: #5a6573;
+    --accent: #ff5b1f;
+    --accent-soft: rgba(255, 91, 31, 0.12);
+    --teal: #36d1b7;
+    --violet: #9d7bff;
+    --amber: #f5b942;
+    --pink: #ff5d9e;
+    --blue: #4ea1ff;
+    --grid: rgba(255,255,255,0.04);
+    --grid-strong: rgba(255,255,255,0.08);
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: var(--paper); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; }
   body {
-    background-image:
-      radial-gradient(circle at 20% 10%, rgba(200, 65, 11, 0.04) 0%, transparent 40%),
-      radial-gradient(circle at 80% 90%, rgba(232, 138, 74, 0.05) 0%, transparent 50%);
+    background:
+      radial-gradient(1200px 700px at 90% -10%, rgba(255,91,31,0.08), transparent 60%),
+      radial-gradient(900px 600px at -10% 30%, rgba(54,209,183,0.05), transparent 60%),
+      var(--bg);
     min-height: 100vh;
   }
-  .wrap { max-width: 1320px; margin: 0 auto; padding: 48px 40px 80px; }
 
-  /* Masthead */
-  .masthead {
-    border-top: 3px solid var(--rule);
-    border-bottom: 1px solid var(--rule);
-    padding: 28px 0 22px;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: 24px;
-    margin-bottom: 40px;
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 36px; border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+    position: sticky; top: 0; z-index: 50; background: rgba(11,13,16,0.85);
   }
-  .masthead .left, .masthead .right {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
+  .brand {
+    display: flex; align-items: baseline; gap: 14px;
   }
-  .masthead .right { text-align: right; }
-  .masthead h1 {
-    font-family: var(--serif);
-    font-weight: 300;
-    font-size: clamp(36px, 5vw, 64px);
-    line-height: 0.95;
-    letter-spacing: -0.02em;
-    font-style: italic;
-    text-align: center;
+  .brand .mark {
+    width: 10px; height: 10px; background: var(--accent);
+    border-radius: 2px; box-shadow: 0 0 18px var(--accent);
+    align-self: center;
   }
-  .masthead h1 em { font-style: normal; font-weight: 800; }
+  .brand h1 {
+    font-family: 'Fraunces', serif; font-weight: 500;
+    font-size: 22px; margin: 0; letter-spacing: -0.01em;
+  }
+  .brand h1 em { font-style: italic; color: var(--accent); font-weight: 400; }
+  .topbar .meta { display: flex; gap: 18px; align-items: center; }
+  .meta .pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--text-dim);
+    padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 4px;
+  }
+  .meta .pill .dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--teal); margin-right: 6px; vertical-align: middle;
+    box-shadow: 0 0 8px var(--teal);
+  }
+  .meta button {
+    background: var(--accent); color: #fff; border: none;
+    padding: 9px 16px; border-radius: 4px; font-family: 'Outfit'; font-weight: 500;
+    font-size: 13px; cursor: pointer; letter-spacing: 0.02em;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .meta button:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,91,31,0.35); }
+  .meta button:disabled { opacity: 0.5; cursor: wait; }
 
-  .sub-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 56px;
-    padding-bottom: 12px;
-    border-bottom: 1px dotted rgba(21, 19, 15, 0.25);
-  }
-  .status-dot {
-    display: inline-block;
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--accent);
-    margin-right: 8px;
-    vertical-align: middle;
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
+  main { padding: 28px 36px 60px; max-width: 1700px; margin: 0 auto; }
 
-  /* Loading / error */
-  .state-box {
-    padding: 80px 40px;
-    text-align: center;
-    border: 1px solid var(--rule);
-    background: var(--paper-warm);
+  .hero {
+    display: grid; grid-template-columns: 1.4fr 1fr; gap: 28px;
+    margin-bottom: 28px; align-items: end;
   }
-  .state-box h2 {
-    font-family: var(--serif);
-    font-size: 28px;
-    font-weight: 400;
-    font-style: italic;
-    margin-bottom: 12px;
+  .hero h2 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 58px; line-height: 1.02; letter-spacing: -0.025em;
+    margin: 0 0 14px;
   }
-  .state-box p { color: var(--ink-soft); font-size: 14px; max-width: 540px; margin: 0 auto; }
-  .spinner {
-    width: 32px; height: 32px;
-    border: 2px solid var(--ink);
-    border-top-color: transparent;
-    border-radius: 50%;
-    margin: 0 auto 24px;
-    animation: spin 0.8s linear infinite;
+  .hero h2 em { font-style: italic; color: var(--accent); }
+  .hero p { color: var(--text-dim); max-width: 540px; margin: 0; font-size: 15px; line-height: 1.55; }
+  .hero .source {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--text-mute); word-break: break-all; line-height: 1.6;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .retry-btn {
-    margin-top: 20px;
-    background: var(--ink);
-    color: var(--paper);
-    border: none;
-    padding: 10px 24px;
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .retry-btn:hover { background: var(--accent); }
+  .hero .source a { color: var(--text-dim); text-decoration: none; border-bottom: 1px dotted var(--text-mute); }
 
-  /* KPI grid */
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0;
-    border-top: 1px solid var(--rule);
-    border-left: 1px solid var(--rule);
-    margin-bottom: 64px;
-  }
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
   .kpi {
-    padding: 28px 24px;
-    border-right: 1px solid var(--rule);
-    border-bottom: 1px solid var(--rule);
-    background: var(--paper);
-    transition: background 0.3s;
+    background: var(--bg-card); border: 1px solid var(--border);
+    padding: 22px 22px 20px; border-radius: 6px; position: relative; overflow: hidden;
   }
-  .kpi:hover { background: var(--paper-warm); }
-  .kpi-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 14px;
+  .kpi::before {
+    content: ''; position: absolute; left: 0; top: 0; width: 3px; height: 100%;
+    background: var(--accent);
   }
-  .kpi-value {
-    font-family: var(--serif);
-    font-size: 42px;
-    font-weight: 400;
-    line-height: 1;
-    letter-spacing: -0.02em;
-    color: var(--ink);
+  .kpi:nth-child(2)::before { background: var(--teal); }
+  .kpi:nth-child(3)::before { background: var(--violet); }
+  .kpi:nth-child(4)::before { background: var(--amber); }
+  .kpi .label {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-mute); margin-bottom: 14px;
   }
-  .kpi-value .small { font-size: 18px; color: var(--muted); font-style: italic; }
-  .kpi-sub {
-    font-family: var(--sans);
-    font-size: 12px;
-    color: var(--ink-soft);
-    margin-top: 10px;
+  .kpi .value {
+    font-family: 'Fraunces', serif; font-size: 40px; line-height: 1;
+    font-weight: 500; letter-spacing: -0.02em;
   }
+  .kpi .sub { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
 
-  /* Section headers */
-  .section {
-    margin-bottom: 64px;
+  .grid {
+    display: grid; gap: 20px;
+    grid-template-columns: repeat(12, 1fr);
   }
-  .section-head {
-    display: flex;
-    align-items: baseline;
-    gap: 16px;
-    margin-bottom: 28px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--rule);
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 6px; padding: 24px; position: relative;
   }
-  .section-head .num {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--accent);
-    letter-spacing: 0.1em;
+  .card.span-12 { grid-column: span 12; }
+  .card.span-8  { grid-column: span 8; }
+  .card.span-6  { grid-column: span 6; }
+  .card.span-4  { grid-column: span 4; }
+  .card-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    margin-bottom: 18px; gap: 16px; flex-wrap: wrap;
   }
-  .section-head h2 {
-    font-family: var(--serif);
-    font-size: 28px;
-    font-weight: 400;
-    font-style: italic;
-    letter-spacing: -0.01em;
+  .card-head h3 {
+    font-family: 'Fraunces', serif; font-weight: 500; font-size: 22px;
+    margin: 0; letter-spacing: -0.01em;
   }
-  .section-head .meta {
-    margin-left: auto;
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
+  .card-head .sub {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-mute); margin-top: 4px;
   }
+  .card-head .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .toggle {
+    background: transparent; color: var(--text-dim);
+    border: 1px solid var(--border-strong); border-radius: 4px;
+    padding: 6px 12px; font-size: 12px; font-family: 'Outfit'; cursor: pointer;
+    transition: all .15s;
+  }
+  .toggle:hover { color: var(--text); border-color: var(--text-mute); }
+  .toggle.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-  /* Charts */
-  .chart-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-    gap: 32px;
-  }
-  .chart-card {
-    background: var(--paper);
-    border: 1px solid var(--rule);
-    padding: 24px;
-    position: relative;
-  }
-  .chart-title {
-    font-family: var(--serif);
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    letter-spacing: -0.01em;
-  }
-  .chart-subtitle {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 20px;
-  }
-  .chart-canvas-wrap {
-    position: relative;
-    height: 280px;
-  }
+  .chart-wrap { position: relative; height: 360px; }
+  .chart-wrap.tall { height: 420px; }
+  .chart-wrap.short { height: 300px; }
 
-  /* Table */
-  .table-wrap {
-    border: 1px solid var(--rule);
-    overflow: auto;
-    max-height: 540px;
-    background: var(--paper);
+  .leaderboard { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; padding-right: 6px; }
+  .leaderboard::-webkit-scrollbar { width: 6px; }
+  .leaderboard::-webkit-scrollbar-track { background: transparent; }
+  .leaderboard::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+  .lb-row {
+    display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: center;
+    padding: 10px 12px; background: var(--bg-elev); border-radius: 4px;
+    border: 1px solid transparent; transition: border-color .15s;
   }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  thead {
-    position: sticky;
-    top: 0;
-    background: var(--ink);
-    color: var(--paper);
-    z-index: 1;
+  .lb-row:hover { border-color: var(--border-strong); }
+  .lb-rank {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--text-mute); text-align: right;
   }
-  th {
-    text-align: left;
-    padding: 14px 16px;
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-weight: 500;
-    white-space: nowrap;
-    cursor: pointer;
-    user-select: none;
-  }
-  th:hover { background: var(--accent); }
-  th .sort-ind { opacity: 0.4; margin-left: 4px; }
-  th.sorted .sort-ind { opacity: 1; }
-  td {
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(21, 19, 15, 0.08);
-    font-family: var(--sans);
+  .lb-name {
+    font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis;
     white-space: nowrap;
   }
-  td.numeric { font-family: var(--mono); text-align: right; }
-  tbody tr:hover { background: var(--paper-warm); }
+  .lb-bar {
+    position: relative; height: 22px; width: 110px; background: var(--border);
+    border-radius: 2px; overflow: hidden;
+  }
+  .lb-bar .fill {
+    position: absolute; left: 0; top: 0; height: 100%;
+    background: var(--accent); border-radius: 2px;
+  }
+  .lb-bar .num {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #fff;
+    font-weight: 600; mix-blend-mode: difference;
+  }
+  .card.ob .lb-bar .fill { background: var(--teal); }
 
-  .table-controls {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 16px;
-    align-items: center;
+  .status-bar {
+    margin-top: 14px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--text-mute);
   }
-  .table-controls input {
-    flex: 1;
-    padding: 10px 14px;
-    border: 1px solid var(--rule);
-    background: var(--paper);
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--ink);
-    outline: none;
-  }
-  .table-controls input:focus { border-color: var(--accent); }
-  .table-controls .count {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
+  .status-bar.error { color: #ff7070; }
 
-  /* Footer */
+  .loading {
+    display: flex; align-items: center; justify-content: center; height: 100%;
+    color: var(--text-mute); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    letter-spacing: 0.08em;
+  }
+  .loading::after {
+    content: ''; width: 8px; height: 8px; background: var(--accent); border-radius: 50%;
+    margin-left: 10px; animation: pulse 1.2s infinite ease-in-out;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.3; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1); } }
+
   footer {
-    margin-top: 80px;
-    padding-top: 24px;
-    border-top: 1px solid var(--rule);
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    display: flex;
-    justify-content: space-between;
+    margin-top: 50px; padding-top: 22px; border-top: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-mute);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
   }
-  footer a { color: var(--accent); text-decoration: none; }
 
-  @media (max-width: 720px) {
-    .wrap { padding: 24px 20px 60px; }
-    .masthead { grid-template-columns: 1fr; text-align: center; }
-    .masthead .right { text-align: center; }
-    .chart-grid { grid-template-columns: 1fr; }
-    .sub-bar { flex-direction: column; gap: 8px; align-items: flex-start; }
+  @media (max-width: 1200px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .card.span-8, .card.span-6, .card.span-4 { grid-column: span 12; }
+    .hero { grid-template-columns: 1fr; }
+    .hero h2 { font-size: 42px; }
+  }
+  @media (max-width: 640px) {
+    .topbar { padding: 16px 18px; }
+    main { padding: 20px 18px 40px; }
+    .kpi-row { grid-template-columns: 1fr; }
+    .hero h2 { font-size: 32px; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <div class="masthead">
-    <div class="left">No. 001 &nbsp;·&nbsp; Vol. I</div>
-    <h1>The <em>Daily</em> Numbers</h1>
-    <div class="right" id="date-stamp">—</div>
+<header class="topbar">
+  <div class="brand">
+    <span class="mark"></span>
+    <h1>spyne <em>·</em> ai analytics</h1>
   </div>
-
-  <div class="sub-bar">
-    <div><span class="status-dot"></span><span id="conn-status">Connecting to source…</span></div>
-    <div id="source-info">Spyne · Metabase Public Question</div>
+  <div class="meta">
+    <div class="pill"><span class="dot"></span><span id="status-pill">Initializing</span></div>
+    <button id="refresh-btn">↻ Refresh</button>
   </div>
+</header>
 
-  <div id="content">
-    <div class="state-box">
-      <div class="spinner"></div>
-      <h2>Fetching live data…</h2>
-      <p>Pulling the latest from Metabase. If the source is large, this may take a moment.</p>
+<main>
+  <section class="hero">
+    <div>
+      <h2>SKU velocity &<br/><em>image throughput</em></h2>
+      <p>Day-wise creation trends for AI SKUs, broken down by customer-success and onboarding POCs, plus distinct image volume by first creation date.</p>
     </div>
-  </div>
+    <div class="source">
+      <div style="color:var(--text-dim);margin-bottom:6px;">DATA SOURCE</div>
+      <a href="https://metabase.spyne.ai/public/question/d5777560-dcd6-427f-a8c1-e745c4d24aa6.csv" target="_blank" rel="noopener">
+        metabase.spyne.ai/public/question/d5777560-dcd6-427f-a8c1-e745c4d24aa6.csv
+      </a>
+    </div>
+  </section>
+
+  <section class="kpi-row">
+    <div class="kpi">
+      <div class="label">Total AI SKUs</div>
+      <div class="value" id="kpi-sku">—</div>
+      <div class="sub" id="kpi-sku-sub">across all dates</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Distinct Images</div>
+      <div class="value" id="kpi-img">—</div>
+      <div class="sub" id="kpi-img-sub">first-image-created basis</div>
+    </div>
+    <div class="kpi">
+      <div class="label">CS POCs</div>
+      <div class="value" id="kpi-cs">—</div>
+      <div class="sub" id="kpi-cs-sub">unique owners</div>
+    </div>
+    <div class="kpi">
+      <div class="label">OB POCs</div>
+      <div class="value" id="kpi-ob">—</div>
+      <div class="sub" id="kpi-ob-sub">unique owners</div>
+    </div>
+  </section>
+
+  <section class="grid">
+
+    <div class="card span-12">
+      <div class="card-head">
+        <div>
+          <h3>Day-wise AI SKU trend</h3>
+          <div class="sub">ai.sku_id count · grouped by day</div>
+        </div>
+        <div class="controls">
+          <button class="toggle active" data-trend="total">Total</button>
+          <button class="toggle" data-trend="ma">7-day moving avg</button>
+        </div>
+      </div>
+      <div class="chart-wrap tall"><canvas id="chart-trend"></canvas><div class="loading" id="loading-trend">LOADING DATA</div></div>
+    </div>
+
+    <div class="card span-8">
+      <div class="card-head">
+        <div>
+          <h3>SKUs by CS POC over time</h3>
+          <div class="sub">stacked daily contribution · top 8</div>
+        </div>
+        <div class="controls">
+          <button class="toggle active" data-mode-cs="stacked">Stacked</button>
+          <button class="toggle" data-mode-cs="line">Lines</button>
+        </div>
+      </div>
+      <div class="chart-wrap tall"><canvas id="chart-cs"></canvas><div class="loading" id="loading-cs">LOADING DATA</div></div>
+    </div>
+
+    <div class="card span-4 cs">
+      <div class="card-head">
+        <div>
+          <h3>CS POC leaderboard</h3>
+          <div class="sub">total SKUs owned</div>
+        </div>
+      </div>
+      <div class="leaderboard" id="lb-cs"></div>
+    </div>
+
+    <div class="card span-8 ob">
+      <div class="card-head">
+        <div>
+          <h3>SKUs by OB POC over time</h3>
+          <div class="sub">stacked daily contribution · top 8</div>
+        </div>
+        <div class="controls">
+          <button class="toggle active" data-mode-ob="stacked">Stacked</button>
+          <button class="toggle" data-mode-ob="line">Lines</button>
+        </div>
+      </div>
+      <div class="chart-wrap tall"><canvas id="chart-ob"></canvas><div class="loading" id="loading-ob">LOADING DATA</div></div>
+    </div>
+
+    <div class="card span-4 ob">
+      <div class="card-head">
+        <div>
+          <h3>OB POC leaderboard</h3>
+          <div class="sub">total SKUs owned</div>
+        </div>
+      </div>
+      <div class="leaderboard" id="lb-ob"></div>
+    </div>
+
+    <div class="card span-12">
+      <div class="card-head">
+        <div>
+          <h3>Distinct image count</h3>
+          <div class="sub">by first_image_created_on (day)</div>
+        </div>
+        <div class="controls">
+          <button class="toggle active" data-img="bar">Bars</button>
+          <button class="toggle" data-img="area">Area</button>
+        </div>
+      </div>
+      <div class="chart-wrap tall"><canvas id="chart-img"></canvas><div class="loading" id="loading-img">LOADING DATA</div></div>
+    </div>
+
+  </section>
+
+  <div class="status-bar" id="status-bar">Awaiting data fetch…</div>
 
   <footer>
-    <div>Live data dashboard · Auto-refreshed on load</div>
-    <div>Source: <a href="https://metabase.spyne.ai/public/question/d5777560-dcd6-427f-a8c1-e745c4d24aa6" target="_blank">Metabase ↗</a></div>
+    <span>spyne · ai analytics · client-side render</span>
+    <span id="footer-stamp">—</span>
   </footer>
-</div>
+</main>
 
 <script>
 // ============================================================
@@ -359,496 +373,476 @@
 // ============================================================
 const CSV_URL = "https://metabase.spyne.ai/public/question/d5777560-dcd6-427f-a8c1-e745c4d24aa6.csv";
 
-// Fallback CORS proxies (tried in order if direct fetch fails)
-// Note: public CORS proxies are best-effort; for production, host your own.
-const CORS_PROXIES = [
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-];
+const PALETTE = ['#ff5b1f','#36d1b7','#9d7bff','#f5b942','#ff5d9e','#4ea1ff','#7fdc6a','#ffa15c','#c084fc','#34d399'];
 
-// Date stamp
-document.getElementById('date-stamp').textContent =
-  new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
+// Chart.js global defaults to match dark theme
+Chart.defaults.color = '#8b97a8';
+Chart.defaults.font.family = "'Outfit', sans-serif";
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
 
 // ============================================================
-// FETCH
+// HELPERS
 // ============================================================
-async function fetchCSV() {
-  const attempts = [
-    { label: 'direct', url: CSV_URL },
-    ...CORS_PROXIES.map((fn, i) => ({ label: `proxy-${i+1}`, url: fn(CSV_URL) })),
-  ];
+function lc(s) { return (s || '').toString().toLowerCase().trim(); }
 
-  let lastErr;
-  for (const a of attempts) {
-    try {
-      document.getElementById('conn-status').textContent = `Connecting via ${a.label}…`;
-      const r = await fetch(a.url, { method: 'GET' });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const text = await r.text();
-      if (!text || text.length < 10) throw new Error('Empty response');
-      document.getElementById('conn-status').textContent = `Live · via ${a.label}`;
-      return text;
-    } catch (e) {
-      lastErr = e;
-      console.warn(`${a.label} failed:`, e);
+// Tolerant column lookup (Metabase exports often have variations)
+function pickCol(headers, candidates) {
+  const lower = headers.map(h => lc(h));
+  for (const cand of candidates) {
+    const idx = lower.indexOf(lc(cand));
+    if (idx !== -1) return headers[idx];
+  }
+  // partial contains match
+  for (const cand of candidates) {
+    const idx = lower.findIndex(h => h.includes(lc(cand)));
+    if (idx !== -1) return headers[idx];
+  }
+  return null;
+}
+
+function parseDateKey(raw) {
+  if (!raw) return null;
+  const s = raw.toString().trim();
+  if (!s) return null;
+  // try ISO first
+  const d = new Date(s);
+  if (!isNaN(d)) {
+    // normalize to YYYY-MM-DD
+    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  return null;
+}
+
+function fmtNum(n) {
+  if (n == null || isNaN(n)) return '—';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return n.toLocaleString();
+}
+
+function movingAvg(arr, win) {
+  const out = [];
+  for (let i = 0; i < arr.length; i++) {
+    const start = Math.max(0, i - win + 1);
+    const slice = arr.slice(start, i+1);
+    const sum = slice.reduce((a,b) => a + b, 0);
+    out.push(sum / slice.length);
+  }
+  return out;
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let DATA = null;          // parsed rows
+let COLS = null;          // resolved column names
+let CHARTS = {};          // chart instances
+
+// ============================================================
+// FETCH + PARSE
+// ============================================================
+async function fetchData() {
+  setStatus('Fetching CSV from Metabase…');
+  document.getElementById('refresh-btn').disabled = true;
+  try {
+    const res = await fetch(CSV_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
+    if (parsed.errors && parsed.errors.length) {
+      console.warn('Parse warnings:', parsed.errors.slice(0, 3));
     }
+    DATA = parsed.data;
+    const headers = parsed.meta.fields || [];
+    COLS = {
+      sku:      pickCol(headers, ['ai.sku_id','sku_id','ai_sku_id','sku id']),
+      created:  pickCol(headers, ['created_at','created_on','sku_created_on','day','date']),
+      csEmail:  pickCol(headers, ['cs_poc_email','cs_email','cs poc email']),
+      obEmail:  pickCol(headers, ['ob_poc_email','ob_email','ob poc email']),
+      imgCount: pickCol(headers, ['distinct_image_count','image_count','distinct image count']),
+      firstImg: pickCol(headers, ['first_image_created_on','first_image_created_at','first_image_created'])
+    };
+    console.log('Resolved columns:', COLS, 'from headers:', headers);
+    if (!COLS.sku) {
+      setStatus(`⚠ Could not resolve ai.sku_id column. Headers seen: ${headers.join(', ')}`, true);
+    }
+    render();
+    setStatus(`Loaded ${DATA.length.toLocaleString()} rows · ${headers.length} columns · resolved cols → ${Object.entries(COLS).filter(([k,v])=>v).map(([k,v])=>`${k}=${v}`).join(', ')}`);
+    document.getElementById('status-pill').textContent = 'Live';
+    document.getElementById('footer-stamp').textContent = 'updated ' + new Date().toLocaleString();
+  } catch (e) {
+    console.error(e);
+    setStatus(
+      `Failed to fetch CSV: ${e.message}. If this is a CORS error, open this HTML in a context that has access to Metabase, or download the CSV and replace CSV_URL with a local path.`,
+      true
+    );
+    document.getElementById('status-pill').textContent = 'Offline';
+    document.querySelectorAll('.loading').forEach(el => {
+      el.textContent = 'FETCH FAILED · see status bar';
+      el.style.color = '#ff7070';
+    });
+  } finally {
+    document.getElementById('refresh-btn').disabled = false;
   }
-  throw lastErr || new Error('All fetch attempts failed');
 }
 
-// ============================================================
-// SCHEMA DETECTION
-// ============================================================
-function detectColumnType(values) {
-  const nonNull = values.filter(v => v !== null && v !== undefined && v !== '');
-  if (nonNull.length === 0) return { type: 'empty' };
-
-  // Try numeric
-  let numCount = 0;
-  for (const v of nonNull) {
-    const n = Number(String(v).replace(/[,\s]/g, ''));
-    if (!isNaN(n) && isFinite(n)) numCount++;
-  }
-  if (numCount / nonNull.length > 0.85) {
-    const nums = nonNull.map(v => Number(String(v).replace(/[,\s]/g, ''))).filter(n => !isNaN(n));
-    return { type: 'numeric', min: Math.min(...nums), max: Math.max(...nums), sum: nums.reduce((a,b)=>a+b,0), count: nums.length };
-  }
-
-  // Try date
-  let dateCount = 0;
-  for (const v of nonNull.slice(0, Math.min(50, nonNull.length))) {
-    const d = new Date(v);
-    if (!isNaN(d.getTime()) && String(v).match(/[\-\/:]/)) dateCount++;
-  }
-  if (dateCount / Math.min(50, nonNull.length) > 0.8) {
-    return { type: 'date' };
-  }
-
-  // Categorical
-  const unique = new Set(nonNull.map(String));
-  return { type: 'categorical', cardinality: unique.size, total: nonNull.length };
-}
-
-function analyzeSchema(rows, columns) {
-  const schema = {};
-  for (const col of columns) {
-    schema[col] = detectColumnType(rows.map(r => r[col]));
-  }
-  return schema;
-}
-
-// ============================================================
-// FORMATTING
-// ============================================================
-function fmtNumber(n, opts = {}) {
-  if (n === null || n === undefined || isNaN(n)) return '—';
-  const abs = Math.abs(n);
-  if (opts.compact && abs >= 1_000_000_000) return (n/1_000_000_000).toFixed(2).replace(/\.?0+$/, '') + 'B';
-  if (opts.compact && abs >= 1_000_000) return (n/1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'M';
-  if (opts.compact && abs >= 1_000) return (n/1_000).toFixed(1).replace(/\.?0+$/, '') + 'K';
-  return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
-}
-
-function fmtCell(v, type) {
-  if (v === null || v === undefined || v === '') return '—';
-  if (type === 'numeric') {
-    const n = Number(String(v).replace(/[,\s]/g, ''));
-    return isNaN(n) ? v : fmtNumber(n);
-  }
-  return String(v);
+function setStatus(msg, isErr) {
+  const el = document.getElementById('status-bar');
+  el.textContent = msg;
+  el.classList.toggle('error', !!isErr);
 }
 
 // ============================================================
 // RENDER
 // ============================================================
-function render(rows, columns) {
-  const schema = analyzeSchema(rows, columns);
-  const numericCols = columns.filter(c => schema[c].type === 'numeric');
-  const categoricalCols = columns.filter(c => schema[c].type === 'categorical');
-  const dateCols = columns.filter(c => schema[c].type === 'date');
+function render() {
+  if (!DATA) return;
+  renderKPIs();
+  renderTrend();
+  renderByEmail('cs');
+  renderByEmail('ob');
+  renderImages();
+  document.querySelectorAll('.loading').forEach(el => el.remove());
+}
 
-  const content = document.getElementById('content');
-  content.innerHTML = '';
+function renderKPIs() {
+  const skus = new Set();
+  const csSet = new Set();
+  const obSet = new Set();
+  let imgSum = 0;
 
-  // --- KPI cards ---
-  const kpiData = [];
-  kpiData.push({ label: 'Total Records', value: fmtNumber(rows.length, { compact: true }), sub: `${columns.length} fields tracked` });
-
-  // Top numeric columns as KPIs (sum or avg)
-  for (const col of numericCols.slice(0, 4)) {
-    const s = schema[col];
-    const sum = s.sum;
-    const avg = s.sum / s.count;
-    // Heuristic: if values are mostly large/integer & col name suggests count → show sum; otherwise avg
-    const looksLikeCount = /count|total|num|qty|quantity|orders?|items?|users?|sessions?|visits?|clicks?|views?|amount|revenue|sales|sum|gmv/i.test(col);
-    if (looksLikeCount) {
-      kpiData.push({
-        label: col,
-        value: fmtNumber(sum, { compact: true }),
-        sub: `avg ${fmtNumber(avg, { compact: true })} · max ${fmtNumber(s.max, { compact: true })}`
-      });
-    } else {
-      kpiData.push({
-        label: `Avg ${col}`,
-        value: fmtNumber(avg, { compact: true }),
-        sub: `range ${fmtNumber(s.min, { compact: true })}–${fmtNumber(s.max, { compact: true })}`
-      });
+  for (const r of DATA) {
+    if (COLS.sku && r[COLS.sku]) skus.add(r[COLS.sku]);
+    if (COLS.csEmail && r[COLS.csEmail]) csSet.add(r[COLS.csEmail]);
+    if (COLS.obEmail && r[COLS.obEmail]) obSet.add(r[COLS.obEmail]);
+    if (COLS.imgCount && r[COLS.imgCount]) {
+      const n = Number(r[COLS.imgCount]);
+      if (!isNaN(n)) imgSum += n;
     }
   }
 
-  // If we have a low-cardinality categorical, show "categories" count
-  for (const col of categoricalCols) {
-    const s = schema[col];
-    if (s.cardinality > 1 && s.cardinality <= 50 && kpiData.length < 6) {
-      kpiData.push({ label: `Unique ${col}`, value: fmtNumber(s.cardinality), sub: `across ${fmtNumber(s.total)} entries` });
+  document.getElementById('kpi-sku').textContent = fmtNum(skus.size);
+  document.getElementById('kpi-img').textContent = fmtNum(imgSum);
+  document.getElementById('kpi-cs').textContent  = fmtNum(csSet.size);
+  document.getElementById('kpi-ob').textContent  = fmtNum(obSet.size);
+}
+
+// ---------- Day-wise SKU trend ----------
+function aggregateByDay(dateCol) {
+  const map = new Map(); // day -> Set of sku ids (to count distinct sku per day)
+  for (const r of DATA) {
+    const day = parseDateKey(r[dateCol]);
+    if (!day) continue;
+    if (!map.has(day)) map.set(day, new Set());
+    if (COLS.sku && r[COLS.sku]) map.get(day).add(r[COLS.sku]);
+    else map.get(day).add(Math.random()); // fallback: count rows
+  }
+  const days = [...map.keys()].sort();
+  const counts = days.map(d => map.get(d).size);
+  return { days, counts };
+}
+
+let trendMode = 'total';
+function renderTrend() {
+  if (!COLS.created) {
+    setStatus(`⚠ No created date column resolved. Looked for created_at / created_on.`, true);
+    return;
+  }
+  const { days, counts } = aggregateByDay(COLS.created);
+  if (CHARTS.trend) CHARTS.trend.destroy();
+  const ma7 = movingAvg(counts, 7);
+
+  const ctx = document.getElementById('chart-trend').getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 360);
+  grad.addColorStop(0, 'rgba(255,91,31,0.45)');
+  grad.addColorStop(1, 'rgba(255,91,31,0.00)');
+
+  CHARTS.trend = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: days,
+      datasets: [
+        {
+          label: 'SKUs / day',
+          data: counts,
+          borderColor: '#ff5b1f',
+          backgroundColor: grad,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+          hidden: trendMode === 'ma'
+        },
+        {
+          label: '7-day moving avg',
+          data: ma7,
+          borderColor: '#36d1b7',
+          borderDash: [4,4],
+          borderWidth: 2,
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0,
+          hidden: trendMode === 'total'
+        }
+      ]
+    },
+    options: chartOpts({ timeAxis: true })
+  });
+}
+
+// ---------- SKUs by CS / OB POC ----------
+function renderByEmail(kind) {
+  const emailCol = kind === 'cs' ? COLS.csEmail : COLS.obEmail;
+  if (!emailCol || !COLS.created) return;
+
+  // day -> email -> Set(sku)
+  const byDay = new Map();
+  const emailTotals = new Map();
+
+  for (const r of DATA) {
+    const day = parseDateKey(r[COLS.created]);
+    const email = r[emailCol];
+    if (!day || !email) continue;
+    const sku = COLS.sku ? r[COLS.sku] : Math.random();
+    if (!byDay.has(day)) byDay.set(day, new Map());
+    if (!byDay.get(day).has(email)) byDay.get(day).set(email, new Set());
+    byDay.get(day).get(email).add(sku);
+    emailTotals.set(email, (emailTotals.get(email) || 0) + 1);
+  }
+
+  // accurate totals (distinct SKUs per email across all days)
+  const distinctPerEmail = new Map();
+  for (const [day, m] of byDay) {
+    for (const [em, set] of m) {
+      if (!distinctPerEmail.has(em)) distinctPerEmail.set(em, new Set());
+      for (const s of set) distinctPerEmail.get(em).add(s);
     }
   }
+  const totals = [...distinctPerEmail.entries()]
+    .map(([em, set]) => [em, set.size])
+    .sort((a,b) => b[1] - a[1]);
 
-  const kpiGrid = document.createElement('div');
-  kpiGrid.className = 'kpi-grid';
-  kpiGrid.innerHTML = kpiData.slice(0, 6).map(k => `
-    <div class="kpi">
-      <div class="kpi-label">${escapeHtml(k.label)}</div>
-      <div class="kpi-value">${k.value}</div>
-      <div class="kpi-sub">${escapeHtml(k.sub)}</div>
-    </div>
-  `).join('');
-  content.appendChild(kpiGrid);
+  const TOP = 8;
+  const topEmails = totals.slice(0, TOP).map(t => t[0]);
+  const otherEmails = totals.slice(TOP).map(t => t[0]);
 
-  // --- Charts section ---
-  const chartsSection = document.createElement('section');
-  chartsSection.className = 'section';
-  chartsSection.innerHTML = `
-    <div class="section-head">
-      <span class="num">§ 01</span>
-      <h2>Visual breakdown</h2>
-      <span class="meta">Auto-generated from schema</span>
-    </div>
-    <div class="chart-grid" id="chart-grid"></div>
-  `;
-  content.appendChild(chartsSection);
+  const days = [...byDay.keys()].sort();
+  const datasets = topEmails.map((em, i) => ({
+    label: em.length > 28 ? em.slice(0,26) + '…' : em,
+    fullLabel: em,
+    data: days.map(d => (byDay.get(d).get(em)?.size) || 0),
+    backgroundColor: PALETTE[i % PALETTE.length],
+    borderColor: PALETTE[i % PALETTE.length],
+    borderWidth: 0,
+    stack: 'a',
+    tension: 0.3,
+    pointRadius: 0,
+    fill: true
+  }));
 
-  const chartGrid = document.getElementById('chart-grid');
-  const chartConfigs = buildChartConfigs(rows, columns, schema, numericCols, categoricalCols, dateCols);
-
-  if (chartConfigs.length === 0) {
-    chartGrid.innerHTML = `<div class="chart-card"><div class="chart-title">No charts available</div><div class="chart-subtitle">Schema didn't yield numeric or categorical breakdowns</div></div>`;
+  if (otherEmails.length) {
+    datasets.push({
+      label: `Other (${otherEmails.length})`,
+      data: days.map(d => {
+        let sum = 0;
+        for (const em of otherEmails) sum += (byDay.get(d).get(em)?.size) || 0;
+        return sum;
+      }),
+      backgroundColor: '#3a4555',
+      borderColor: '#3a4555',
+      borderWidth: 0,
+      stack: 'a',
+      tension: 0.3,
+      pointRadius: 0,
+      fill: true
+    });
   }
 
-  chartConfigs.forEach((cfg, idx) => {
-    const card = document.createElement('div');
-    card.className = 'chart-card';
-    card.innerHTML = `
-      <div class="chart-title">${escapeHtml(cfg.title)}</div>
-      <div class="chart-subtitle">${escapeHtml(cfg.subtitle)}</div>
-      <div class="chart-canvas-wrap"><canvas id="chart-${idx}"></canvas></div>
-    `;
-    chartGrid.appendChild(card);
-    renderChart(`chart-${idx}`, cfg);
+  const canvasId = kind === 'cs' ? 'chart-cs' : 'chart-ob';
+  const chartKey = kind === 'cs' ? 'cs' : 'ob';
+  const modeKey = kind === 'cs' ? 'modeCs' : 'modeOb';
+  const mode = state[modeKey] || 'stacked';
+
+  if (CHARTS[chartKey]) CHARTS[chartKey].destroy();
+  CHARTS[chartKey] = new Chart(document.getElementById(canvasId).getContext('2d'), {
+    type: mode === 'stacked' ? 'bar' : 'line',
+    data: { labels: days, datasets: datasets.map(d => ({...d, fill: mode === 'stacked'})) },
+    options: chartOpts({ timeAxis: true, stacked: mode === 'stacked', legend: true })
   });
 
-  // --- Data table ---
-  const tableSection = document.createElement('section');
-  tableSection.className = 'section';
-  tableSection.innerHTML = `
-    <div class="section-head">
-      <span class="num">§ 02</span>
-      <h2>The raw record</h2>
-      <span class="meta">${rows.length} rows · ${columns.length} cols</span>
-    </div>
-    <div class="table-controls">
-      <input type="text" id="search" placeholder="Filter rows…" />
-      <span class="count" id="row-count">${rows.length} rows</span>
-    </div>
-    <div class="table-wrap">
-      <table id="data-table">
-        <thead><tr>${columns.map(c => `<th data-col="${escapeHtml(c)}">${escapeHtml(c)}<span class="sort-ind">↕</span></th>`).join('')}</tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  `;
-  content.appendChild(tableSection);
+  // leaderboard
+  const lbEl = document.getElementById(kind === 'cs' ? 'lb-cs' : 'lb-ob');
+  lbEl.innerHTML = '';
+  const max = totals[0]?.[1] || 1;
+  totals.slice(0, 20).forEach(([em, count], i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row';
+    row.title = em;
+    row.innerHTML = `
+      <div class="lb-rank">${String(i+1).padStart(2,'0')}</div>
+      <div class="lb-name">${em}</div>
+      <div class="lb-bar">
+        <div class="fill" style="width:${(count/max)*100}%"></div>
+        <span class="num">${count}</span>
+      </div>
+    `;
+    lbEl.appendChild(row);
+  });
+}
 
-  setupTable(rows, columns, schema);
+// ---------- Distinct image count by first_image_created_on ----------
+let imgMode = 'bar';
+function renderImages() {
+  if (!COLS.firstImg) {
+    setStatus(`⚠ No first_image_created_on column resolved.`, true);
+    return;
+  }
+  const map = new Map(); // day -> total distinct_image_count
+  for (const r of DATA) {
+    const day = parseDateKey(r[COLS.firstImg]);
+    if (!day) continue;
+    let n = 0;
+    if (COLS.imgCount && r[COLS.imgCount] != null) n = Number(r[COLS.imgCount]) || 0;
+    else n = 1; // fallback row count
+    map.set(day, (map.get(day) || 0) + n);
+  }
+  const days = [...map.keys()].sort();
+  const counts = days.map(d => map.get(d));
+
+  if (CHARTS.img) CHARTS.img.destroy();
+
+  const ctx = document.getElementById('chart-img').getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 360);
+  grad.addColorStop(0, 'rgba(157,123,255,0.5)');
+  grad.addColorStop(1, 'rgba(157,123,255,0.02)');
+
+  CHARTS.img = new Chart(ctx, {
+    type: imgMode === 'bar' ? 'bar' : 'line',
+    data: {
+      labels: days,
+      datasets: [{
+        label: 'Distinct images',
+        data: counts,
+        backgroundColor: imgMode === 'bar' ? '#9d7bff' : grad,
+        borderColor: '#9d7bff',
+        borderWidth: imgMode === 'bar' ? 0 : 2,
+        fill: imgMode === 'area',
+        tension: 0.3,
+        pointRadius: 0,
+        borderRadius: 2
+      }]
+    },
+    options: chartOpts({ timeAxis: true })
+  });
 }
 
 // ============================================================
-// CHART CONFIG BUILDERS
+// CHART OPTIONS
 // ============================================================
-function buildChartConfigs(rows, columns, schema, numericCols, categoricalCols, dateCols) {
-  const configs = [];
-
-  // 1) Categorical × Numeric → bar chart (top N)
-  for (const catCol of categoricalCols) {
-    const s = schema[catCol];
-    if (s.cardinality > 30 || s.cardinality < 2) continue;
-    const numCol = numericCols[0];
-    if (numCol) {
-      const agg = {};
-      for (const row of rows) {
-        const k = String(row[catCol] ?? '—');
-        const v = Number(String(row[numCol] ?? '').replace(/[,\s]/g, ''));
-        if (!isNaN(v)) agg[k] = (agg[k] || 0) + v;
-      }
-      const sorted = Object.entries(agg).sort((a, b) => b[1] - a[1]).slice(0, 12);
-      configs.push({
-        type: 'bar',
-        title: `${numCol} by ${catCol}`,
-        subtitle: `Top ${sorted.length} · summed`,
-        labels: sorted.map(s => s[0]),
-        data: sorted.map(s => s[1]),
-        dataLabel: numCol,
-      });
-    } else {
-      // Just count occurrences
-      const agg = {};
-      for (const row of rows) {
-        const k = String(row[catCol] ?? '—');
-        agg[k] = (agg[k] || 0) + 1;
-      }
-      const sorted = Object.entries(agg).sort((a, b) => b[1] - a[1]).slice(0, 12);
-      configs.push({
-        type: sorted.length <= 6 ? 'doughnut' : 'bar',
-        title: `Distribution of ${catCol}`,
-        subtitle: `Count of records · top ${sorted.length}`,
-        labels: sorted.map(s => s[0]),
-        data: sorted.map(s => s[1]),
-        dataLabel: 'Count',
-      });
-    }
-    if (configs.length >= 2) break;
-  }
-
-  // 2) Date × Numeric → line chart
-  if (dateCols.length && numericCols.length) {
-    const dCol = dateCols[0];
-    const nCol = numericCols[0];
-    const points = rows
-      .map(r => ({ d: new Date(r[dCol]), v: Number(String(r[nCol] ?? '').replace(/[,\s]/g, '')) }))
-      .filter(p => !isNaN(p.d.getTime()) && !isNaN(p.v))
-      .sort((a, b) => a.d - b.d);
-    if (points.length > 1) {
-      // Aggregate by day
-      const agg = {};
-      for (const p of points) {
-        const key = p.d.toISOString().slice(0, 10);
-        agg[key] = (agg[key] || 0) + p.v;
-      }
-      const entries = Object.entries(agg).sort();
-      configs.push({
-        type: 'line',
-        title: `${nCol} over time`,
-        subtitle: `Daily · by ${dCol}`,
-        labels: entries.map(e => e[0]),
-        data: entries.map(e => e[1]),
-        dataLabel: nCol,
-      });
-    }
-  }
-
-  // 3) Numeric distribution → histogram
-  for (const nCol of numericCols.slice(0, 2)) {
-    const vals = rows.map(r => Number(String(r[nCol] ?? '').replace(/[,\s]/g, ''))).filter(n => !isNaN(n));
-    if (vals.length < 5) continue;
-    const min = Math.min(...vals), max = Math.max(...vals);
-    if (min === max) continue;
-    const bins = Math.min(15, Math.max(5, Math.floor(Math.sqrt(vals.length))));
-    const w = (max - min) / bins;
-    const counts = new Array(bins).fill(0);
-    for (const v of vals) {
-      const i = Math.min(bins - 1, Math.floor((v - min) / w));
-      counts[i]++;
-    }
-    const labels = counts.map((_, i) => {
-      const lo = min + i * w, hi = min + (i + 1) * w;
-      return `${fmtNumber(lo, {compact:true})}–${fmtNumber(hi, {compact:true})}`;
-    });
-    configs.push({
-      type: 'bar',
-      title: `Distribution of ${nCol}`,
-      subtitle: `Histogram · ${bins} bins`,
-      labels,
-      data: counts,
-      dataLabel: 'Frequency',
-    });
-    if (configs.length >= 4) break;
-  }
-
-  return configs.slice(0, 4);
-}
-
-// ============================================================
-// CHART RENDER
-// ============================================================
-function renderChart(canvasId, cfg) {
-  const ctx = document.getElementById(canvasId).getContext('2d');
-  const accent = '#c8410b';
-  const accentSoft = '#e88a4a';
-  const ink = '#15130f';
-  const palette = ['#c8410b', '#15130f', '#8a8474', '#e88a4a', '#3a342b', '#bfa980', '#6e4e2a', '#a8895c'];
-
-  const baseOpts = {
+function chartOpts({ timeAxis, stacked, legend } = {}) {
+  return {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: cfg.type === 'doughnut', position: 'bottom', labels: { font: { family: 'JetBrains Mono', size: 10 }, color: ink, padding: 12 } },
+      legend: {
+        display: legend !== false,
+        position: 'bottom',
+        labels: {
+          boxWidth: 10, boxHeight: 10, padding: 14, usePointStyle: true,
+          font: { size: 11 }, color: '#8b97a8'
+        }
+      },
       tooltip: {
-        backgroundColor: ink,
-        titleFont: { family: 'Fraunces', size: 13, weight: '600' },
-        bodyFont: { family: 'JetBrains Mono', size: 11 },
+        backgroundColor: '#11151a',
+        titleColor: '#e8ecf1',
+        bodyColor: '#e8ecf1',
+        borderColor: '#2a3440',
+        borderWidth: 1,
         padding: 12,
-        cornerRadius: 0,
+        titleFont: { family: 'JetBrains Mono', size: 11 },
+        bodyFont: { family: 'Outfit', size: 12 },
+        callbacks: {
+          title: (items) => items[0]?.label || '',
+          label: (ctx) => {
+            const ds = ctx.dataset;
+            const name = ds.fullLabel || ds.label;
+            return `  ${name}: ${ctx.parsed.y?.toLocaleString?.() ?? ctx.parsed.y}`;
+          }
+        }
       }
     },
-    scales: cfg.type === 'doughnut' ? {} : {
-      x: { ticks: { font: { family: 'JetBrains Mono', size: 10 }, color: '#8a8474', maxRotation: 45, minRotation: 0 }, grid: { color: 'rgba(21,19,15,0.06)' } },
-      y: { ticks: { font: { family: 'JetBrains Mono', size: 10 }, color: '#8a8474', callback: v => fmtNumber(v, {compact:true}) }, grid: { color: 'rgba(21,19,15,0.06)' } },
+    scales: {
+      x: timeAxis ? {
+        type: 'time',
+        time: { unit: 'day', tooltipFormat: 'MMM d, yyyy', displayFormats: { day: 'MMM d' } },
+        grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+        ticks: { color: '#8b97a8', font: { size: 11 }, maxRotation: 0, autoSkipPadding: 14 },
+        stacked: !!stacked
+      } : {
+        grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+        ticks: { color: '#8b97a8', font: { size: 11 } },
+        stacked: !!stacked
+      },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.06)', drawBorder: false },
+        ticks: { color: '#8b97a8', font: { size: 11 }, callback: (v) => fmtNum(v) },
+        stacked: !!stacked,
+        beginAtZero: true
+      }
     }
   };
+}
 
-  let datasetCfg;
-  if (cfg.type === 'doughnut') {
-    datasetCfg = {
-      data: cfg.data,
-      backgroundColor: cfg.data.map((_, i) => palette[i % palette.length]),
-      borderColor: '#f5f1e8',
-      borderWidth: 2,
-    };
-  } else if (cfg.type === 'line') {
-    datasetCfg = {
-      label: cfg.dataLabel,
-      data: cfg.data,
-      borderColor: accent,
-      backgroundColor: 'rgba(200, 65, 11, 0.08)',
-      fill: true,
-      tension: 0.3,
-      pointRadius: 3,
-      pointBackgroundColor: accent,
-      pointBorderColor: '#f5f1e8',
-      pointBorderWidth: 1.5,
-      borderWidth: 2,
-    };
-  } else {
-    datasetCfg = {
-      label: cfg.dataLabel,
-      data: cfg.data,
-      backgroundColor: accent,
-      hoverBackgroundColor: accentSoft,
-      borderWidth: 0,
-    };
-  }
+// ============================================================
+// UI INTERACTIONS
+// ============================================================
+const state = { modeCs: 'stacked', modeOb: 'stacked' };
 
-  new Chart(ctx, {
-    type: cfg.type,
-    data: { labels: cfg.labels, datasets: [datasetCfg] },
-    options: baseOpts,
+document.querySelectorAll('[data-trend]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-trend]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    trendMode = btn.dataset.trend;
+    if (CHARTS.trend) {
+      CHARTS.trend.data.datasets[0].hidden = trendMode === 'ma';
+      CHARTS.trend.data.datasets[1].hidden = trendMode === 'total';
+      CHARTS.trend.update();
+    }
   });
-}
+});
 
-// ============================================================
-// TABLE
-// ============================================================
-let tableState = { sortCol: null, sortDir: 1, filter: '' };
-
-function setupTable(rows, columns, schema) {
-  const tbody = document.querySelector('#data-table tbody');
-  const search = document.getElementById('search');
-  const countEl = document.getElementById('row-count');
-
-  function paint() {
-    let filtered = rows;
-    if (tableState.filter) {
-      const f = tableState.filter.toLowerCase();
-      filtered = rows.filter(r => columns.some(c => String(r[c] ?? '').toLowerCase().includes(f)));
-    }
-    if (tableState.sortCol) {
-      const col = tableState.sortCol;
-      const dir = tableState.sortDir;
-      const isNum = schema[col].type === 'numeric';
-      filtered = [...filtered].sort((a, b) => {
-        let av = a[col], bv = b[col];
-        if (isNum) { av = Number(String(av).replace(/[,\s]/g,'')); bv = Number(String(bv).replace(/[,\s]/g,'')); }
-        else { av = String(av ?? ''); bv = String(bv ?? ''); }
-        if (av < bv) return -dir;
-        if (av > bv) return dir;
-        return 0;
-      });
-    }
-    // Cap display at 500 rows for performance
-    const display = filtered.slice(0, 500);
-    tbody.innerHTML = display.map(r =>
-      `<tr>${columns.map(c => {
-        const cls = schema[c].type === 'numeric' ? ' class="numeric"' : '';
-        return `<td${cls}>${escapeHtml(fmtCell(r[c], schema[c].type))}</td>`;
-      }).join('')}</tr>`
-    ).join('');
-    countEl.textContent = `${filtered.length} rows${filtered.length > 500 ? ' (showing 500)' : ''}`;
-  }
-
-  search.addEventListener('input', e => { tableState.filter = e.target.value; paint(); });
-
-  document.querySelectorAll('#data-table th').forEach(th => {
-    th.addEventListener('click', () => {
-      const col = th.dataset.col;
-      if (tableState.sortCol === col) tableState.sortDir *= -1;
-      else { tableState.sortCol = col; tableState.sortDir = 1; }
-      document.querySelectorAll('#data-table th').forEach(t => t.classList.remove('sorted'));
-      th.classList.add('sorted');
-      th.querySelector('.sort-ind').textContent = tableState.sortDir === 1 ? '↓' : '↑';
-      paint();
-    });
+document.querySelectorAll('[data-mode-cs]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-mode-cs]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.modeCs = btn.dataset.modeCs;
+    renderByEmail('cs');
   });
+});
+document.querySelectorAll('[data-mode-ob]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-mode-ob]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.modeOb = btn.dataset.modeOb;
+    renderByEmail('ob');
+  });
+});
+document.querySelectorAll('[data-img]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-img]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    imgMode = btn.dataset.img;
+    renderImages();
+  });
+});
 
-  paint();
-}
+document.getElementById('refresh-btn').addEventListener('click', fetchData);
 
-// ============================================================
-// UTILS
-// ============================================================
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-function showError(msg) {
-  document.getElementById('content').innerHTML = `
-    <div class="state-box">
-      <h2>Couldn't reach the source</h2>
-      <p>${escapeHtml(msg)}</p>
-      <p style="margin-top:12px">This usually means the Metabase server is blocking cross-origin requests (CORS) and our public proxies are unavailable. For production, host this dashboard on Vercel and add a serverless function to proxy the CSV, or have Metabase admin enable CORS.</p>
-      <button class="retry-btn" onclick="boot()">Retry</button>
-    </div>
-  `;
-  document.getElementById('conn-status').textContent = 'Connection failed';
-}
-
-// ============================================================
-// BOOT
-// ============================================================
-async function boot() {
-  document.getElementById('content').innerHTML = `
-    <div class="state-box">
-      <div class="spinner"></div>
-      <h2>Fetching live data…</h2>
-      <p>Pulling the latest from Metabase. If the source is large, this may take a moment.</p>
-    </div>
-  `;
-  try {
-    const csv = await fetchCSV();
-    const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true, dynamicTyping: false });
-    if (!parsed.data || parsed.data.length === 0) {
-      showError('CSV parsed but contained no rows.');
-      return;
-    }
-    const columns = parsed.meta.fields || Object.keys(parsed.data[0]);
-    render(parsed.data, columns);
-  } catch (e) {
-    console.error(e);
-    showError(e.message || String(e));
-  }
-}
-
-boot();
+// kick off
+fetchData();
 </script>
 </body>
 </html>
