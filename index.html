@@ -305,6 +305,86 @@
   .card.team .lb-bar .fill { background: var(--blue); }
   .card.acc .lb-bar .fill { background: var(--green); }
 
+  /* ============ POC LEADERBOARD (rich UI) ============ */
+  .poc-board { display: flex; flex-direction: column; gap: 8px; max-height: 540px; overflow-y: auto; padding-right: 4px; }
+  .poc-board::-webkit-scrollbar { width: 6px; }
+  .poc-board::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+  .poc-row {
+    display: grid;
+    grid-template-columns: 28px 36px minmax(0, 1.4fr) repeat(3, minmax(60px, auto)) minmax(120px, 1fr);
+    gap: 14px; align-items: center;
+    padding: 10px 14px;
+    background: var(--bg-elev);
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: border-color .15s, transform .15s, background .15s;
+    cursor: pointer;
+    position: relative; overflow: hidden;
+  }
+  .poc-row:hover {
+    border-color: var(--accent);
+    transform: translateX(2px);
+    background: linear-gradient(90deg, var(--bg-elev) 0%, rgba(255,91,31,0.04) 100%);
+  }
+  .poc-row.gold   { background: linear-gradient(90deg, rgba(245,185,66,0.08), var(--bg-elev) 35%); }
+  .poc-row.silver { background: linear-gradient(90deg, rgba(139,151,168,0.07), var(--bg-elev) 35%); }
+  .poc-row.bronze { background: linear-gradient(90deg, rgba(184,115,51,0.07), var(--bg-elev) 35%); }
+  .poc-rank {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-mute);
+    text-align: right; font-weight: 600;
+  }
+  .poc-row.gold .poc-rank   { color: #f5b942; }
+  .poc-row.silver .poc-rank { color: #cbd5e1; }
+  .poc-row.bronze .poc-rank { color: #d4a37a; }
+  .poc-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; color: #fff;
+    flex-shrink: 0; border: 1px solid rgba(255,255,255,0.06);
+  }
+  .poc-identity { min-width: 0; }
+  .poc-name {
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; color: var(--text);
+    line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .poc-email {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-mute);
+    line-height: 1.4; margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .poc-stat { text-align: right; min-width: 0; }
+  .poc-stat .v {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--text); font-weight: 600; line-height: 1.1;
+  }
+  .poc-stat .l {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text-mute); margin-top: 3px;
+  }
+  .poc-progress {
+    position: relative; height: 6px; background: rgba(255,255,255,0.05);
+    border-radius: 3px; overflow: hidden;
+  }
+  .poc-progress .fill {
+    position: absolute; left: 0; top: 0; height: 100%; border-radius: 3px;
+    transition: width .4s;
+  }
+  .card.cs .poc-progress .fill { background: linear-gradient(90deg, var(--accent), #ff8a5b); }
+  .card.ob .poc-progress .fill { background: linear-gradient(90deg, var(--teal), #6ee7d4); }
+  .poc-progress-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim);
+    margin-top: 4px; text-align: right;
+  }
+  .poc-empty {
+    padding: 32px 16px; text-align: center; color: var(--text-mute);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  }
+  @media (max-width: 1100px) {
+    .poc-row { grid-template-columns: 24px 32px minmax(0, 1fr) minmax(60px, auto) minmax(120px, 1fr); }
+    .poc-row .poc-stat.hide-md { display: none; }
+  }
+
   /* CRM status breakdown — tile grid */
   .crm-grid {
     display: grid; gap: 12px;
@@ -711,40 +791,30 @@
       <div class="card-head">
         <div>
           <h3>CS POC leaderboard</h3>
-          <div class="sub">total SKUs · click row to drill</div>
+          <div class="sub">ranked by distinct SKUs · click any row to drill</div>
         </div>
       </div>
-      <div class="leaderboard" id="lb-cs"></div>
+      <div class="poc-board" id="lb-cs"></div>
     </div>
 
     <div class="card span-6 ob">
       <div class="card-head">
         <div>
           <h3>OB POC leaderboard</h3>
-          <div class="sub">total SKUs · click row to drill</div>
+          <div class="sub">ranked by distinct SKUs · click any row to drill</div>
         </div>
       </div>
-      <div class="leaderboard" id="lb-ob"></div>
+      <div class="poc-board" id="lb-ob"></div>
     </div>
 
-    <div class="card span-6 seg">
+    <div class="card span-12 seg">
       <div class="card-head">
         <div>
           <h3>SKUs & images per segment</h3>
-          <div class="sub">grouped bars · click any bar to drill</div>
+          <div class="sub">grouped bars · share % shown above each segment · click any bar to drill</div>
         </div>
       </div>
       <div class="chart-wrap tall"><canvas id="chart-seg-combined"></canvas></div>
-    </div>
-
-    <div class="card span-6">
-      <div class="card-head">
-        <div>
-          <h3>Segment share</h3>
-          <div class="sub">distribution of SKUs · click slice to drill</div>
-        </div>
-      </div>
-      <div class="chart-wrap"><canvas id="chart-seg-donut"></canvas></div>
     </div>
 
     <div class="card span-12 crm">
@@ -1092,7 +1162,6 @@ function applyAndRender() {
   renderByGroup('cs', rows);
   renderByGroup('ob', rows);
   renderByGroup('seg', rows);
-  renderSegmentDonut(rows);
   renderSegmentImages(rows);
   renderCRM(rows);
   renderAccuracy('ent', rows);
@@ -1347,44 +1416,96 @@ function renderTrend(rows) {
 }
 
 // ---------- Group leaderboard rendering (cs / ob / seg) ----------
-// The accompanying time-series charts have been removed; this just builds the leaderboards.
+// CS and OB get a rich card-style layout. Segment keeps the simple bar (no longer rendered — kept for safety).
 function renderByGroup(kind, rows) {
-  let col;
-  if (kind === 'cs') col = COLS.csEmail;
-  else if (kind === 'ob') col = COLS.obEmail;
-  else col = COLS.segment;
+  if (kind === 'seg') return; // segment leaderboard removed in favor of full-width segment chart
+
+  const col = kind === 'cs' ? COLS.csEmail : COLS.obEmail;
   if (!col) return;
-
-  // Aggregate distinct SKUs per group (no date dimension needed)
-  const distinctPerGrp = new Map();
-  for (const r of rows) {
-    const grp = r[col]; if (!grp) continue;
-    if (!distinctPerGrp.has(grp)) distinctPerGrp.set(grp, new Set());
-    distinctPerGrp.get(grp).add(COLS.sku ? r[COLS.sku] : Symbol());
-  }
-  const totals = [...distinctPerGrp.entries()].map(([g, s]) => [g, s.size]).sort((a,b) => b[1] - a[1]);
-
-  // Leaderboard
-  const lbEl = document.getElementById(kind === 'cs' ? 'lb-cs' : kind === 'ob' ? 'lb-ob' : 'lb-seg');
+  const lbEl = document.getElementById(kind === 'cs' ? 'lb-cs' : 'lb-ob');
   if (!lbEl) return;
+
+  // Aggregate everything we want per POC: distinct SKUs, total images, edited, distinct enterprises, distinct active days
+  const agg = new Map();
+  for (const r of rows) {
+    const k = r[col]; if (!k) continue;
+    if (!agg.has(k)) agg.set(k, { skus: new Set(), images: 0, edited: 0, ents: new Set(), days: new Set() });
+    const o = agg.get(k);
+    if (COLS.sku && r[COLS.sku]) o.skus.add(r[COLS.sku]);
+    if (COLS.imgCount && r[COLS.imgCount]) { const n = Number(r[COLS.imgCount]); if (!isNaN(n)) o.images += n; }
+    if (COLS.editedCount && r[COLS.editedCount]) { const n = Number(r[COLS.editedCount]); if (!isNaN(n)) o.edited += n; }
+    if (COLS.enterpriseName && r[COLS.enterpriseName]) o.ents.add(r[COLS.enterpriseName]);
+    if (COLS.created) { const d = parseDateKey(r[COLS.created]); if (d) o.days.add(d); }
+  }
+  const arr = [...agg.entries()]
+    .map(([k, o]) => ({ k, skus: o.skus.size, images: o.images, edited: o.edited, ents: o.ents.size, days: o.days.size }))
+    .sort((a, b) => b.skus - a.skus);
   lbEl.innerHTML = '';
-  const max = totals[0]?.[1] || 1;
-  totals.slice(0, 50).forEach(([g, count], i) => {
+  if (!arr.length) {
+    lbEl.innerHTML = `<div class="poc-empty">No ${kind === 'cs' ? 'CS' : 'OB'} POCs match the current filter</div>`;
+    return;
+  }
+  const maxSkus = arr[0].skus || 1;
+
+  // Generate a deterministic color per email so the avatar is consistent across renders
+  const colorFor = (s) => {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i);
+    const palette = ['#ff5b1f','#36d1b7','#9d7bff','#f5b942','#fb7185','#4ea1ff','#7fdc6a','#c084fc','#22d3ee','#fda4af','#ffa15c','#67e8f9'];
+    return palette[Math.abs(h) % palette.length];
+  };
+  const initialsOf = (email) => {
+    const local = (email.split('@')[0] || '').replace(/[^\w.]+/g, '.');
+    const parts = local.split(/[._-]+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return email.slice(0, 2).toUpperCase();
+  };
+  const nameOf = (email) => {
+    const local = (email.split('@')[0] || '');
+    return local.split(/[._-]+/).filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') || email;
+  };
+
+  arr.slice(0, 50).forEach((o, i) => {
     const row = document.createElement('div');
-    row.className = 'lb-row';
-    row.title = g;
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    row.className = 'poc-row ' + rankClass;
+    row.title = `${o.k} — click to drill down`;
+    const c = colorFor(o.k);
+    const pct = (o.skus / maxSkus) * 100;
     row.innerHTML = `
-      <div class="lb-rank">${String(i+1).padStart(2,'0')}</div>
-      <div class="lb-name">${g}</div>
-      <div class="lb-bar"><div class="fill" style="width:${(count/max)*100}%"></div><span class="num">${count}</span></div>
+      <div class="poc-rank">#${String(i+1).padStart(2,'0')}</div>
+      <div class="poc-avatar" style="background:linear-gradient(135deg, ${c}, ${c}cc)">${initialsOf(o.k)}</div>
+      <div class="poc-identity">
+        <div class="poc-name">${nameOf(o.k)}</div>
+        <div class="poc-email">${o.k}</div>
+      </div>
+      <div class="poc-stat">
+        <div class="v">${fmtNum(o.skus)}</div>
+        <div class="l">SKUs</div>
+      </div>
+      <div class="poc-stat hide-md">
+        <div class="v">${fmtNum(o.images)}</div>
+        <div class="l">Images</div>
+      </div>
+      <div class="poc-stat hide-md">
+        <div class="v">${o.ents}</div>
+        <div class="l">Ents</div>
+      </div>
+      <div>
+        <div class="poc-progress"><div class="fill" style="width:${pct}%"></div></div>
+        <div class="poc-progress-label">${pct.toFixed(0)}% of leader · ${o.days} active days</div>
+      </div>
     `;
-    row.addEventListener('click', () => drillGroup(kind, g));
+    row.addEventListener('click', () => drillGroup(kind, o.k));
     lbEl.appendChild(row);
   });
 }
 
 // ---------- Segment donut ----------
 function renderSegmentDonut(rows) {
+  const canvas = document.getElementById('chart-seg-donut');
+  if (!canvas) return;
   if (!COLS.segment) return;
   const map = new Map();
   for (const r of rows) {
@@ -1432,7 +1553,7 @@ function renderSegmentDonut(rows) {
   });
 }
 
-// ---------- SKUs & images per segment (combined dual-axis grouped bars) ----------
+// ---------- SKUs & images per segment (combined dual-axis grouped bars with share %) ----------
 function renderSegmentImages(rows) {
   if (!COLS.segment) return;
   const canvas = document.getElementById('chart-seg-combined');
@@ -1455,6 +1576,56 @@ function renderSegmentImages(rows) {
   const labels = entries.map(e => e.k);
   const skuData = entries.map(e => e.skus);
   const imgData = entries.map(e => e.images);
+  const totalSkus = skuData.reduce((a,b) => a+b, 0) || 1;
+  const totalImgs = imgData.reduce((a,b) => a+b, 0) || 1;
+  const skuShare = skuData.map(v => (v / totalSkus) * 100);
+  const imgShare = imgData.map(v => (v / totalImgs) * 100);
+
+  // Custom plugin: draw a "X% / Y%" share badge centered above each segment group
+  const sharePlugin = {
+    id: 'segmentShareBadge',
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      const meta0 = chart.getDatasetMeta(0); // SKU bars
+      const meta1 = chart.getDatasetMeta(1); // image bars
+      if (!meta0?.data?.length || !meta1?.data?.length) return;
+      ctx.save();
+      labels.forEach((_, i) => {
+        const bar0 = meta0.data[i]; const bar1 = meta1.data[i];
+        if (!bar0 || !bar1) return;
+        // Center between the two bars in the group, at the top of the chart area
+        const cx = (bar0.x + bar1.x) / 2;
+        const top = chart.chartArea.top + 4;
+        const text = `${skuShare[i].toFixed(1)}% SKUs · ${imgShare[i].toFixed(1)}% imgs`;
+        ctx.font = '600 10px "JetBrains Mono", monospace';
+        const w = ctx.measureText(text).width + 14;
+        const h = 20;
+        // pill background
+        ctx.fillStyle = 'rgba(157,123,255,0.12)';
+        ctx.strokeStyle = 'rgba(157,123,255,0.4)';
+        ctx.lineWidth = 1;
+        const x = cx - w/2, y = top;
+        const r = 4;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        // text
+        ctx.fillStyle = '#c084fc';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(text, cx, top + h/2);
+      });
+      ctx.restore();
+    }
+  };
 
   if (CHARTS.segImg) CHARTS.segImg.destroy();
   CHARTS.segImg = new Chart(canvas.getContext('2d'), {
@@ -1486,10 +1657,12 @@ function renderSegmentImages(rows) {
         }
       ]
     },
+    plugins: [sharePlugin],
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
-      layout: { padding: { top: 20, right: 12, left: 4, bottom: 4 } },
+      // Bigger top padding so the share badge has space
+      layout: { padding: { top: 56, right: 12, left: 4, bottom: 4 } },
       plugins: {
         legend: {
           position: 'bottom',
@@ -1498,6 +1671,10 @@ function renderSegmentImages(rows) {
         tooltip: {
           ...tooltipStyle(),
           callbacks: {
+            title: (items) => {
+              const i = items[0].dataIndex;
+              return `${labels[i]}  ·  ${skuShare[i].toFixed(1)}% of SKUs  ·  ${imgShare[i].toFixed(1)}% of images`;
+            },
             label: (ctx) => `  ${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toLocaleString()}`
           }
         },
@@ -1506,18 +1683,18 @@ function renderSegmentImages(rows) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: '#8b97a8', font: { size: 11 }, autoSkip: false, maxRotation: 30, minRotation: 0 }
+          ticks: { color: '#8b97a8', font: { size: 12, weight: 500 }, autoSkip: false, maxRotation: 20, minRotation: 0 }
         },
         ySku: {
           position: 'left', beginAtZero: true,
-          suggestedMax: Math.max(...skuData, 1) * 1.25,
+          suggestedMax: Math.max(...skuData, 1) * 1.3,
           title: { display: true, text: 'SKUs', color: '#22d3ee', font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
           grid: { color: 'rgba(255,255,255,0.05)' },
           ticks: { color: '#22d3ee', font: { size: 11 }, callback: (v) => fmtNum(v) }
         },
         yImg: {
           position: 'right', beginAtZero: true,
-          suggestedMax: Math.max(...imgData, 1) * 1.25,
+          suggestedMax: Math.max(...imgData, 1) * 1.3,
           title: { display: true, text: 'Distinct images', color: '#fb7185', font: { family: 'JetBrains Mono', size: 10, weight: 600 } },
           grid: { display: false },
           ticks: { color: '#fb7185', font: { size: 11 }, callback: (v) => fmtNum(v) }
