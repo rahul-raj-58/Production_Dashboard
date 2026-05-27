@@ -193,7 +193,7 @@
   .clear-all:hover { color: var(--accent); border-color: var(--accent); }
 
   /* ============ KPI ============ */
-  .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 22px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; margin-bottom: 22px; }
   .kpi {
     background: var(--bg-card); border: 1px solid var(--border);
     padding: 20px 22px; border-radius: 6px; position: relative; overflow: hidden;
@@ -208,6 +208,7 @@
   .kpi:nth-child(4)::before { background: var(--amber); }
   .kpi:nth-child(5)::before { background: var(--blue); }
   .kpi:nth-child(6)::before { background: var(--pink); }
+  .kpi:nth-child(7)::before { background: var(--green); }
   .kpi .label {
     font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
     text-transform: uppercase; color: var(--text-mute); margin-bottom: 12px;
@@ -266,6 +267,17 @@
   }
   .leaderboard::-webkit-scrollbar { width: 6px; }
   .leaderboard::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+  /* Side-by-side: segment leaderboard + segment image bars */
+  .seg-split {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: 18px; align-items: stretch;
+  }
+  .seg-split > .leaderboard { max-height: 360px; }
+  .seg-split > .chart-wrap { position: relative; }
+  @media (max-width: 900px) {
+    .seg-split { grid-template-columns: 1fr; }
+  }
   .lb-row {
     display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; align-items: center;
     padding: 8px 10px; background: var(--bg-elev); border-radius: 4px;
@@ -544,6 +556,12 @@
       <div class="value" id="kpi-img">—</div>
       <div class="sub" id="kpi-img-sub">first-image-created basis</div>
     </div>
+    <div class="kpi" data-drill="avg">
+      <div class="drill-hint">click to drill ↗</div>
+      <div class="label">Avg images / SKU</div>
+      <div class="value" id="kpi-avg">—</div>
+      <div class="sub" id="kpi-avg-sub">distinct_image_count ÷ ai.sku_id</div>
+    </div>
     <div class="kpi" data-drill="cs">
       <div class="drill-hint">click to drill ↗</div>
       <div class="label">CS POCs</div>
@@ -621,7 +639,7 @@
       <div class="leaderboard" id="lb-team" style="display:none; max-height: 420px;"></div>
     </div>
 
-    <div class="card span-4 cs">
+    <div class="card span-6 cs">
       <div class="card-head">
         <div>
           <h3>CS POC leaderboard</h3>
@@ -631,7 +649,7 @@
       <div class="leaderboard" id="lb-cs"></div>
     </div>
 
-    <div class="card span-4 ob">
+    <div class="card span-6 ob">
       <div class="card-head">
         <div>
           <h3>OB POC leaderboard</h3>
@@ -641,14 +659,17 @@
       <div class="leaderboard" id="lb-ob"></div>
     </div>
 
-    <div class="card span-4 seg">
+    <div class="card span-6 seg">
       <div class="card-head">
         <div>
-          <h3>Segment leaderboard</h3>
-          <div class="sub">total SKUs · click row to drill</div>
+          <h3>Segment leaderboard & image volume</h3>
+          <div class="sub">total SKUs and distinct images per segment · click to drill</div>
         </div>
       </div>
-      <div class="leaderboard" id="lb-seg"></div>
+      <div class="seg-split">
+        <div class="leaderboard" id="lb-seg"></div>
+        <div class="chart-wrap" style="height:auto;min-height:320px"><canvas id="chart-seg-images"></canvas></div>
+      </div>
     </div>
 
     <div class="card span-6">
@@ -659,16 +680,6 @@
         </div>
       </div>
       <div class="chart-wrap"><canvas id="chart-seg-donut"></canvas></div>
-    </div>
-
-    <div class="card span-6">
-      <div class="card-head">
-        <div>
-          <h3>Images per segment</h3>
-          <div class="sub">sum of distinct_image_count · click bar to drill</div>
-        </div>
-      </div>
-      <div class="chart-wrap"><canvas id="chart-seg-images"></canvas></div>
     </div>
 
   </section>
@@ -1022,6 +1033,13 @@ function renderKPIs(rows) {
   }
   document.getElementById('kpi-sku').textContent = fmtNum(skus.size);
   document.getElementById('kpi-img').textContent = fmtNum(imgSum);
+  // Avg images per SKU = total distinct_image_count ÷ distinct ai.sku_id count
+  const avg = skus.size > 0 ? imgSum / skus.size : 0;
+  document.getElementById('kpi-avg').textContent =
+    skus.size === 0 ? '—' :
+    avg >= 100 ? avg.toFixed(0) :
+    avg >= 10  ? avg.toFixed(1) :
+                 avg.toFixed(2);
   document.getElementById('kpi-cs').textContent  = fmtNum(csSet.size);
   document.getElementById('kpi-ob').textContent  = fmtNum(obSet.size);
   document.getElementById('kpi-ent').textContent = COLS.enterpriseName ? fmtNum(entSet.size) : '—';
@@ -1593,6 +1611,36 @@ function drillKPI(which) {
     showDrill({ title: 'All SKUs in selected range', sub: `${rows.length.toLocaleString()} rows total`, rows });
   } else if (which === 'img') {
     showDrill({ title: 'Image volume breakdown', sub: `All rows in selected range`, rows });
+  } else if (which === 'avg') {
+    // Per-segment + per-enterprise avg images / SKU breakdown
+    const buildAvgTable = (col, label) => {
+      if (!col) return null;
+      const m = new Map(); // key -> { skus:Set, images:number }
+      for (const r of rows) {
+        const k = r[col]; if (!k) continue;
+        if (!m.has(k)) m.set(k, { skus: new Set(), images: 0 });
+        const o = m.get(k);
+        if (COLS.sku && r[COLS.sku]) o.skus.add(r[COLS.sku]);
+        if (COLS.imgCount && r[COLS.imgCount]) {
+          const n = Number(r[COLS.imgCount]); if (!isNaN(n)) o.images += n;
+        }
+      }
+      const arr = [...m.entries()]
+        .map(([k, o]) => ({ k, skus: o.skus.size, images: o.images, avg: o.skus.size ? o.images / o.skus.size : 0 }))
+        .sort((a, b) => b.avg - a.avg);
+      return { label, arr };
+    };
+
+    showDrill({
+      title: 'Avg images per SKU',
+      sub: 'distinct_image_count ÷ ai.sku_id · broken down by segment, enterprise, team',
+      rows,
+      kpiAvgBreakdown: [
+        buildAvgTable(COLS.segment, 'Segment'),
+        buildAvgTable(COLS.enterpriseName, 'Enterprise'),
+        buildAvgTable(COLS.teamName, 'Team')
+      ].filter(Boolean)
+    });
   } else if (which === 'cs') {
     const counts = new Map();
     for (const r of rows) {
@@ -1641,7 +1689,7 @@ function drillKPI(which) {
   }
 }
 
-function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focusPOC, actionButton, kpiEntityKind }) {
+function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focusPOC, actionButton, kpiEntityKind, kpiAvgBreakdown }) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-sub').textContent = sub;
   const body = document.getElementById('modal-body');
@@ -1670,10 +1718,14 @@ function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focu
     if (COLS.imgCount && r[COLS.imgCount]) { const n = Number(r[COLS.imgCount]); if (!isNaN(n)) imgSum += n; }
   }
   const summary = document.createElement('div'); summary.className = 'modal-summary';
+  const avgVal = distinctSku.size > 0 ? imgSum / distinctSku.size : 0;
+  const avgDisplay = distinctSku.size === 0 ? '—' :
+    avgVal >= 100 ? avgVal.toFixed(0) : avgVal >= 10 ? avgVal.toFixed(1) : avgVal.toFixed(2);
   summary.innerHTML = `
     <div class="summary-stat"><div class="lbl">Rows</div><div class="val">${rows.length.toLocaleString()}</div></div>
     <div class="summary-stat"><div class="lbl">Distinct SKUs</div><div class="val">${fmtNum(distinctSku.size)}</div></div>
     <div class="summary-stat"><div class="lbl">Distinct Images</div><div class="val">${fmtNum(imgSum)}</div></div>
+    <div class="summary-stat"><div class="lbl">Avg images / SKU</div><div class="val" style="color:var(--green)">${avgDisplay}</div></div>
     <div class="summary-stat"><div class="lbl">CS POCs</div><div class="val">${fmtNum(distinctCs.size)}</div></div>
     <div class="summary-stat"><div class="lbl">OB POCs</div><div class="val">${fmtNum(distinctOb.size)}</div></div>
     ${COLS.enterpriseName ? `<div class="summary-stat"><div class="lbl">Enterprises</div><div class="val">${fmtNum(distinctEnt.size)}</div></div>` : ''}
@@ -1681,6 +1733,35 @@ function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focu
     ${COLS.segment ? `<div class="summary-stat"><div class="lbl">Segments</div><div class="val">${fmtNum(distinctSeg.size)}</div></div>` : ''}
   `;
   body.appendChild(summary);
+
+  // ---- Avg images per SKU breakdown ----
+  if (kpiAvgBreakdown && kpiAvgBreakdown.length) {
+    const fmtAvg = (v) => v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+    kpiAvgBreakdown.forEach(({ label, arr }) => {
+      if (!arr || !arr.length) return;
+      const t = document.createElement('div'); t.className = 'modal-section-title';
+      t.textContent = `By ${label.toLowerCase()} · ${arr.length} distinct · ranked by avg images / SKU`;
+      body.appendChild(t);
+      const tbl = document.createElement('table'); tbl.className = 'modal-table';
+      tbl.innerHTML = `<thead><tr>
+          <th>${label}</th>
+          <th style="text-align:right">SKUs</th>
+          <th style="text-align:right">Distinct images</th>
+          <th style="text-align:right">Avg / SKU</th>
+        </tr></thead><tbody>${arr.slice(0, 100).map(o => `
+          <tr><td>${o.k}</td>
+            <td class="num">${o.skus.toLocaleString()}</td>
+            <td class="num">${o.images.toLocaleString()}</td>
+            <td class="num" style="color:var(--green)">${fmtAvg(o.avg)}</td>
+          </tr>`).join('')}</tbody>`;
+      body.appendChild(tbl);
+      if (arr.length > 100) {
+        const more = document.createElement('div'); more.className = 'modal-section-title';
+        more.textContent = `Showing top 100 of ${arr.length}`;
+        body.appendChild(more);
+      }
+    });
+  }
 
   // ---- Entity-specific drill: day-by-day images + nested breakdowns ----
   if (focusEntity) {
