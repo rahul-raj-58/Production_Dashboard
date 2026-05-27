@@ -285,6 +285,8 @@
   }
   .card.ob .lb-bar .fill { background: var(--teal); }
   .card.seg .lb-bar .fill { background: var(--violet); }
+  .card.ent .lb-bar .fill { background: var(--amber); }
+  .card.team .lb-bar .fill { background: var(--blue); }
 
   /* ============ MODAL ============ */
   .modal-backdrop {
@@ -637,6 +639,36 @@
       <div class="chart-wrap"><canvas id="chart-seg-images"></canvas></div>
     </div>
 
+    <div class="card span-6 ent">
+      <div class="card-head">
+        <div>
+          <h3>Top enterprises by image volume</h3>
+          <div class="sub">sum of distinct_image_count · click bar or row to drill</div>
+        </div>
+        <div class="controls">
+          <button class="toggle active" data-ent-view="chart">Chart</button>
+          <button class="toggle" data-ent-view="list">List</button>
+        </div>
+      </div>
+      <div class="chart-wrap tall" id="ent-chart-wrap"><canvas id="chart-ent"></canvas></div>
+      <div class="leaderboard" id="lb-ent" style="display:none; max-height: 420px;"></div>
+    </div>
+
+    <div class="card span-6 team">
+      <div class="card-head">
+        <div>
+          <h3>Top teams by image volume</h3>
+          <div class="sub">end.team_name · sum of distinct_image_count · click to drill</div>
+        </div>
+        <div class="controls">
+          <button class="toggle active" data-team-view="chart">Chart</button>
+          <button class="toggle" data-team-view="list">List</button>
+        </div>
+      </div>
+      <div class="chart-wrap tall" id="team-chart-wrap"><canvas id="chart-team"></canvas></div>
+      <div class="leaderboard" id="lb-team" style="display:none; max-height: 420px;"></div>
+    </div>
+
     <div class="card span-12">
       <div class="card-head">
         <div>
@@ -788,6 +820,8 @@ function loadFromText(text, sourceLabel) {
       segment:  pickCol(headers, ['customer_segment','segment','cust_segment']),
       orgName:  pickCol(headers, ['organization_name','org_name','organisation_name','customer_name','organization','org']),
       enterprise: pickCol(headers, ['enterprise_id','enterprise']),
+      enterpriseName: pickCol(headers, ['enterprise_name','enterprise.name','enterprise']),
+      teamName: pickCol(headers, ['end.team_name','team_name','end_team_name','team.name','team']),
     };
     console.log('Resolved columns:', COLS);
     document.getElementById('file-fallback').classList.remove('visible');
@@ -950,6 +984,8 @@ function applyAndRender() {
   renderByGroup('seg', rows);
   renderSegmentDonut(rows);
   renderSegmentImages(rows);
+  renderTopByImages('ent', rows);
+  renderTopByImages('team', rows);
   renderImages(rows);
 }
 
@@ -1207,6 +1243,97 @@ function renderSegmentImages(rows) {
   });
 }
 
+// ---------- Top enterprises / teams by image volume ----------
+const TOP_VIEW = { ent: 'chart', team: 'chart' };
+function renderTopByImages(kind, rows) {
+  const col = kind === 'ent' ? COLS.enterpriseName : COLS.teamName;
+  const canvas = document.getElementById(kind === 'ent' ? 'chart-ent' : 'chart-team');
+  const lbEl = document.getElementById(kind === 'ent' ? 'lb-ent' : 'lb-team');
+  const chartWrap = document.getElementById(kind === 'ent' ? 'ent-chart-wrap' : 'team-chart-wrap');
+
+  if (!col) {
+    chartWrap.innerHTML = `<div class="loading" style="color:var(--text-mute)">Column not found in CSV</div>`;
+    lbEl.innerHTML = '';
+    return;
+  }
+
+  // Aggregate sum of distinct_image_count per entity
+  const map = new Map();
+  for (const r of rows) {
+    const k = r[col]; if (!k) continue;
+    const n = COLS.imgCount ? (Number(r[COLS.imgCount]) || 0) : 1;
+    map.set(k, (map.get(k) || 0) + n);
+  }
+  const totals = [...map.entries()].sort((a,b) => b[1] - a[1]);
+
+  // ---- Chart view (top 15) ----
+  const TOP_N = 15;
+  const top = totals.slice(0, TOP_N);
+  const labels = top.map(t => t[0]);
+  const data = top.map(t => t[1]);
+  const colorAccent = kind === 'ent' ? '#f5b942' : '#4ea1ff';
+
+  const view = TOP_VIEW[kind];
+  if (view === 'chart') {
+    chartWrap.style.display = ''; lbEl.style.display = 'none';
+    if (CHARTS[kind]) CHARTS[kind].destroy();
+    const ctx = canvas.getContext('2d');
+    CHARTS[kind] = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{
+        label: 'Images', data,
+        backgroundColor: colorAccent,
+        borderRadius: 2,
+        datalabels: {
+          display: true, anchor: 'end', align: 'end', clamp: true,
+          color: '#e8ecf1', font: { family: 'JetBrains Mono', size: 10, weight: 500 },
+          formatter: v => fmtNum(v)
+        }
+      }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { ...tooltipStyle(), callbacks: { label: (ctx) => `  ${ctx.parsed.x.toLocaleString()} images` } },
+          datalabels: { display: true }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#8b97a8', font: { size: 11 }, callback: v => fmtNum(v) }, beginAtZero: true },
+          y: { grid: { color: 'rgba(255,255,255,0.02)' }, ticks: { color: '#8b97a8', font: { size: 11 }, callback: function(v) {
+            const lbl = this.getLabelForValue(v);
+            return lbl && lbl.length > 22 ? lbl.slice(0, 20) + '…' : lbl;
+          } } }
+        },
+        onClick: (evt, els, chart) => {
+          if (!els || !els.length) return;
+          const idx = els[0].index;
+          drillEntity(kind, labels[idx]);
+        }
+      }
+    });
+  }
+
+  // ---- List view ----
+  lbEl.innerHTML = '';
+  if (view === 'list') {
+    chartWrap.style.display = 'none'; lbEl.style.display = 'flex';
+  }
+  const max = totals[0]?.[1] || 1;
+  totals.slice(0, 50).forEach(([g, count], i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row';
+    row.title = g;
+    row.innerHTML = `
+      <div class="lb-rank">${String(i+1).padStart(2,'0')}</div>
+      <div class="lb-name">${g}</div>
+      <div class="lb-bar"><div class="fill" style="width:${(count/max)*100}%"></div><span class="num">${fmtNum(count)}</span></div>
+    `;
+    row.addEventListener('click', () => drillEntity(kind, g));
+    lbEl.appendChild(row);
+  });
+}
+
 // ---------- Image trend ----------
 function renderImages(rows) {
   if (!COLS.firstImg) return;
@@ -1345,6 +1472,16 @@ function drillGroupDay(kind, grpVal, label) {
     rows
   });
 }
+function drillEntity(kind, val) {
+  const col = kind === 'ent' ? COLS.enterpriseName : COLS.teamName;
+  const rows = getFilteredRows().filter(r => r[col] === val);
+  const label = kind === 'ent' ? 'Enterprise' : 'Team';
+  showDrill({
+    title: `${label} · ${val}`,
+    sub: `${rows.length.toLocaleString()} rows match · sorted by image volume`,
+    rows, focusEntity: { kind, val }
+  });
+}
 function drillKPI(which) {
   const rows = getFilteredRows();
   if (which === 'sku') {
@@ -1372,7 +1509,7 @@ function drillKPI(which) {
   }
 }
 
-function showDrill({ title, sub, rows, customTable, focusDate }) {
+function showDrill({ title, sub, rows, customTable, focusDate, focusEntity }) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-sub').textContent = sub;
   const body = document.getElementById('modal-body');
@@ -1398,6 +1535,72 @@ function showDrill({ title, sub, rows, customTable, focusDate }) {
     ${COLS.segment ? `<div class="summary-stat"><div class="lbl">Segments</div><div class="val">${fmtNum(distinctSeg.size)}</div></div>` : ''}
   `;
   body.appendChild(summary);
+
+  // ---- Entity-specific drill: day-by-day images + nested breakdowns ----
+  if (focusEntity) {
+    // Day-by-day distinct_image_count
+    if (COLS.firstImg || COLS.created) {
+      const dateCol = COLS.firstImg || COLS.created;
+      const dayMap = new Map();
+      for (const r of rows) {
+        const day = parseDateKey(r[dateCol]);
+        if (!day) continue;
+        const n = COLS.imgCount ? (Number(r[COLS.imgCount]) || 0) : 1;
+        dayMap.set(day, (dayMap.get(day) || 0) + n);
+      }
+      const dayArr = [...dayMap.entries()].sort();
+      if (dayArr.length) {
+        const t = document.createElement('div'); t.className = 'modal-section-title';
+        t.textContent = `Day-by-day images (${COLS.firstImg ? 'first_image_created_on' : 'created_at'})`;
+        body.appendChild(t);
+        const tbl = document.createElement('table'); tbl.className = 'modal-table';
+        tbl.innerHTML = `<thead><tr><th>Date</th><th style="text-align:right">Distinct images</th></tr></thead>
+          <tbody>${dayArr.map(([d,v]) => `<tr><td>${d}</td><td class="num">${v.toLocaleString()}</td></tr>`).join('')}</tbody>`;
+        body.appendChild(tbl);
+      }
+    }
+    // Nested: if drilling into enterprise, show teams; if team, show enterprises
+    const otherKind = focusEntity.kind === 'ent' ? 'team' : 'ent';
+    const otherCol = otherKind === 'ent' ? COLS.enterpriseName : COLS.teamName;
+    const otherLabel = otherKind === 'ent' ? 'Enterprise' : 'Team';
+    if (otherCol) {
+      const m = new Map();
+      for (const r of rows) {
+        const k = r[otherCol] || '—';
+        const n = COLS.imgCount ? (Number(r[COLS.imgCount]) || 0) : 1;
+        m.set(k, (m.get(k) || 0) + n);
+      }
+      const arr = [...m.entries()].sort((a,b) => b[1] - a[1]);
+      if (arr.length > 1 || (arr.length === 1 && arr[0][0] !== '—')) {
+        const t = document.createElement('div'); t.className = 'modal-section-title';
+        t.textContent = `By ${otherLabel.toLowerCase()}`;
+        body.appendChild(t);
+        const tbl = document.createElement('table'); tbl.className = 'modal-table';
+        tbl.innerHTML = `<thead><tr><th>${otherLabel}</th><th style="text-align:right">Images</th></tr></thead>
+          <tbody>${arr.slice(0, 50).map(([k,v]) => `<tr><td>${k}</td><td class="num">${v.toLocaleString()}</td></tr>`).join('')}</tbody>`;
+        body.appendChild(tbl);
+      }
+    }
+    // Top CS / OB POCs for this entity
+    [['cs', COLS.csEmail, 'CS POC'], ['ob', COLS.obEmail, 'OB POC']].forEach(([_, col, lbl]) => {
+      if (!col) return;
+      const m = new Map();
+      for (const r of rows) {
+        const k = r[col]; if (!k) continue;
+        const n = COLS.imgCount ? (Number(r[COLS.imgCount]) || 0) : 1;
+        m.set(k, (m.get(k) || 0) + n);
+      }
+      const arr = [...m.entries()].sort((a,b) => b[1] - a[1]);
+      if (!arr.length) return;
+      const t = document.createElement('div'); t.className = 'modal-section-title';
+      t.textContent = `By ${lbl.toLowerCase()}`;
+      body.appendChild(t);
+      const tbl = document.createElement('table'); tbl.className = 'modal-table';
+      tbl.innerHTML = `<thead><tr><th>${lbl}</th><th style="text-align:right">Images</th></tr></thead>
+        <tbody>${arr.slice(0, 30).map(([k,v]) => `<tr><td>${k}</td><td class="num">${v.toLocaleString()}</td></tr>`).join('')}</tbody>`;
+      body.appendChild(tbl);
+    });
+  }
 
   // Breakdown by segment (if data available)
   if (COLS.segment && !customTable) {
@@ -1488,6 +1691,17 @@ document.querySelectorAll('[data-img]').forEach(btn => {
     btn.classList.add('active');
     state.imgMode = btn.dataset.img;
     renderImages(getFilteredRows());
+  });
+});
+['ent','team'].forEach(kind => {
+  const attr = `data-${kind}-view`;
+  document.querySelectorAll(`[${attr}]`).forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(`[${attr}]`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      TOP_VIEW[kind] = btn.getAttribute(attr);
+      renderTopByImages(kind, getFilteredRows());
+    });
   });
 });
 
