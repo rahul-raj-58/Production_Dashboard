@@ -116,7 +116,7 @@
     background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
     padding: 16px 18px; margin-bottom: 22px;
     display: grid; gap: 14px;
-    grid-template-columns: auto auto 1fr 1fr auto;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     align-items: end;
   }
   .filter-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -389,8 +389,11 @@
   }
 
   @media (max-width: 1300px) {
-    .filter-bar { grid-template-columns: 1fr 1fr; }
-    .filter-bar .quick-ranges-group { grid-column: span 2; }
+    .filter-bar { grid-template-columns: repeat(3, 1fr); }
+    .filter-bar .quick-ranges-group { grid-column: 1 / -1; }
+  }
+  @media (max-width: 900px) {
+    .filter-bar { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 1100px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
@@ -482,7 +485,27 @@
         </div>
       </div>
     </div>
-    <div class="filter-group quick-ranges-group" style="grid-column: span 5;">
+    <div class="filter-group">
+      <label>Enterprise</label>
+      <div class="multi-wrap">
+        <div class="multi-input" id="ent-input"><span class="placeholder">All enterprises</span></div>
+        <div class="multi-dropdown" id="ent-dropdown">
+          <div class="search-box"><input type="text" placeholder="Search…" id="ent-search"/></div>
+          <div id="ent-options"></div>
+        </div>
+      </div>
+    </div>
+    <div class="filter-group">
+      <label>Team</label>
+      <div class="multi-wrap">
+        <div class="multi-input" id="team-input"><span class="placeholder">All teams</span></div>
+        <div class="multi-dropdown" id="team-dropdown">
+          <div class="search-box"><input type="text" placeholder="Search…" id="team-search"/></div>
+          <div id="team-options"></div>
+        </div>
+      </div>
+    </div>
+    <div class="filter-group quick-ranges-group" style="grid-column: 1 / -1;">
       <label>Quick Ranges</label>
       <div class="quick-ranges">
         <button data-range="7">Last 7d</button>
@@ -701,7 +724,10 @@
         <h3 id="modal-title">Drill down</h3>
         <div class="modal-sub" id="modal-sub"></div>
       </div>
-      <button class="modal-close" id="modal-close">×</button>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn" id="modal-action" style="display:none"></button>
+        <button class="modal-close" id="modal-close">×</button>
+      </div>
     </div>
     <div class="modal-body" id="modal-body"></div>
   </div>
@@ -730,7 +756,9 @@ const filters = {
   dateTo: null,
   csEmails: new Set(),
   obEmails: new Set(),
-  segments: new Set()
+  segments: new Set(),
+  enterprises: new Set(),
+  teams: new Set()
 };
 const state = { trendMode: 'total', modeCs: 'stacked', modeOb: 'stacked', modeSeg: 'stacked', imgMode: 'bar' };
 
@@ -842,15 +870,11 @@ function loadFromText(text, sourceLabel) {
 // FILTER OPTIONS POPULATION
 // ============================================================
 function populateFilterOptions() {
-  // CS emails
-  const cs = countValues(COLS.csEmail);
-  buildMulti('cs', cs, filters.csEmails, 'CS POCs');
-  // OB emails
-  const ob = countValues(COLS.obEmail);
-  buildMulti('ob', ob, filters.obEmails, 'OB POCs');
-  // Segments
-  const seg = countValues(COLS.segment);
-  buildMulti('seg', seg, filters.segments, 'segments');
+  buildMulti('cs', countValues(COLS.csEmail), filters.csEmails, 'CS POCs');
+  buildMulti('ob', countValues(COLS.obEmail), filters.obEmails, 'OB POCs');
+  buildMulti('seg', countValues(COLS.segment), filters.segments, 'segments');
+  buildMulti('ent', countValues(COLS.enterpriseName), filters.enterprises, 'enterprises');
+  buildMulti('team', countValues(COLS.teamName), filters.teams, 'teams');
 }
 function countValues(col) {
   if (!col) return [];
@@ -967,6 +991,8 @@ function getFilteredRows() {
     if (filters.csEmails.size && !filters.csEmails.has(r[COLS.csEmail])) return false;
     if (filters.obEmails.size && !filters.obEmails.has(r[COLS.obEmail])) return false;
     if (filters.segments.size && !filters.segments.has(r[COLS.segment])) return false;
+    if (filters.enterprises.size && COLS.enterpriseName && !filters.enterprises.has(r[COLS.enterpriseName])) return false;
+    if (filters.teams.size && COLS.teamName && !filters.teams.has(r[COLS.teamName])) return false;
     return true;
   });
 }
@@ -994,14 +1020,28 @@ function renderActiveFilters() {
   const chips = document.getElementById('active-filter-chips');
   chips.innerHTML = '';
   let any = false;
-  if (filters.dateFrom || filters.dateTo) {
+  const addChip = (text, onClear) => {
     const s = document.createElement('span'); s.className = 'af-chip';
-    s.textContent = `${filters.dateFrom || '…'} → ${filters.dateTo || '…'}`;
+    s.innerHTML = `${text}${onClear ? ' <span style="cursor:pointer;opacity:0.7;margin-left:6px;font-weight:600">×</span>' : ''}`;
+    if (onClear) s.querySelector('span').addEventListener('click', () => { onClear(); applyAndRender(); });
     chips.appendChild(s); any = true;
+  };
+  if (filters.dateFrom || filters.dateTo) addChip(`${filters.dateFrom || '…'} → ${filters.dateTo || '…'}`);
+  if (filters.csEmails.size) addChip(`CS: ${filters.csEmails.size}`);
+  if (filters.obEmails.size) addChip(`OB: ${filters.obEmails.size}`);
+  if (filters.segments.size) addChip(`Segment: ${filters.segments.size}`);
+  if (filters.enterprises.size) {
+    [...filters.enterprises].forEach(v => {
+      const short = v.length > 24 ? v.slice(0, 22) + '…' : v;
+      addChip(`Enterprise: ${short}`, () => filters.enterprises.delete(v));
+    });
   }
-  if (filters.csEmails.size) { const s = document.createElement('span'); s.className='af-chip'; s.textContent = `CS: ${filters.csEmails.size}`; chips.appendChild(s); any = true; }
-  if (filters.obEmails.size) { const s = document.createElement('span'); s.className='af-chip'; s.textContent = `OB: ${filters.obEmails.size}`; chips.appendChild(s); any = true; }
-  if (filters.segments.size) { const s = document.createElement('span'); s.className='af-chip'; s.textContent = `Segment: ${filters.segments.size}`; chips.appendChild(s); any = true; }
+  if (filters.teams.size) {
+    [...filters.teams].forEach(v => {
+      const short = v.length > 24 ? v.slice(0, 22) + '…' : v;
+      addChip(`Team: ${short}`, () => filters.teams.delete(v));
+    });
+  }
   wrap.classList.toggle('visible', any);
 }
 
@@ -1456,10 +1496,23 @@ function drillImageDay(label) {
 function drillGroup(kind, grpVal) {
   const col = kind === 'cs' ? COLS.csEmail : kind === 'ob' ? COLS.obEmail : COLS.segment;
   const rows = getFilteredRows().filter(r => r[col] === grpVal);
+  const label = kind === 'cs' ? 'CS POC' : kind === 'ob' ? 'OB POC' : 'Segment';
+  const filterSet = kind === 'cs' ? filters.csEmails : kind === 'ob' ? filters.obEmails : filters.segments;
+  const isActive = filterSet.has(grpVal);
   showDrill({
-    title: `${kind === 'cs' ? 'CS POC' : kind === 'ob' ? 'OB POC' : 'Segment'} · ${grpVal}`,
+    title: `${label} · ${grpVal}`,
     sub: `${rows.length.toLocaleString()} rows match`,
-    rows
+    rows, focusPOC: { kind, val: grpVal },
+    actionButton: {
+      label: isActive ? `✕ Remove "${grpVal}" from filter` : `⤓ Apply "${grpVal}" as dashboard filter`,
+      onClick: () => {
+        if (isActive) filterSet.delete(grpVal);
+        else filterSet.add(grpVal);
+        closeModal();
+        populateFilterOptions();
+        applyAndRender();
+      }
+    }
   });
 }
 function drillGroupDay(kind, grpVal, label) {
@@ -1476,10 +1529,21 @@ function drillEntity(kind, val) {
   const col = kind === 'ent' ? COLS.enterpriseName : COLS.teamName;
   const rows = getFilteredRows().filter(r => r[col] === val);
   const label = kind === 'ent' ? 'Enterprise' : 'Team';
+  const filterSet = kind === 'ent' ? filters.enterprises : filters.teams;
+  const isActive = filterSet.has(val);
   showDrill({
     title: `${label} · ${val}`,
     sub: `${rows.length.toLocaleString()} rows match · sorted by image volume`,
-    rows, focusEntity: { kind, val }
+    rows, focusEntity: { kind, val },
+    actionButton: {
+      label: isActive ? `✕ Remove "${val}" filter` : `⤓ Apply as dashboard filter`,
+      onClick: () => {
+        if (isActive) filterSet.delete(val);
+        else { filterSet.clear(); filterSet.add(val); } // single-select for entity filter
+        closeModal();
+        applyAndRender();
+      }
+    }
   });
 }
 function drillKPI(which) {
@@ -1509,20 +1573,32 @@ function drillKPI(which) {
   }
 }
 
-function showDrill({ title, sub, rows, customTable, focusDate, focusEntity }) {
+function showDrill({ title, sub, rows, customTable, focusDate, focusEntity, focusPOC, actionButton }) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-sub').textContent = sub;
   const body = document.getElementById('modal-body');
   body.innerHTML = '';
 
+  // Action button (apply/remove dashboard filter)
+  const actBtn = document.getElementById('modal-action');
+  if (actionButton) {
+    actBtn.style.display = ''; actBtn.textContent = actionButton.label;
+    actBtn.onclick = actionButton.onClick;
+  } else {
+    actBtn.style.display = 'none'; actBtn.onclick = null;
+  }
+
   // Summary stats
   const distinctSku = new Set(), distinctCs = new Set(), distinctOb = new Set(), distinctSeg = new Set();
+  const distinctEnt = new Set(), distinctTeam = new Set();
   let imgSum = 0;
   for (const r of rows) {
     if (COLS.sku && r[COLS.sku]) distinctSku.add(r[COLS.sku]);
     if (COLS.csEmail && r[COLS.csEmail]) distinctCs.add(r[COLS.csEmail]);
     if (COLS.obEmail && r[COLS.obEmail]) distinctOb.add(r[COLS.obEmail]);
     if (COLS.segment && r[COLS.segment]) distinctSeg.add(r[COLS.segment]);
+    if (COLS.enterpriseName && r[COLS.enterpriseName]) distinctEnt.add(r[COLS.enterpriseName]);
+    if (COLS.teamName && r[COLS.teamName]) distinctTeam.add(r[COLS.teamName]);
     if (COLS.imgCount && r[COLS.imgCount]) { const n = Number(r[COLS.imgCount]); if (!isNaN(n)) imgSum += n; }
   }
   const summary = document.createElement('div'); summary.className = 'modal-summary';
@@ -1532,6 +1608,8 @@ function showDrill({ title, sub, rows, customTable, focusDate, focusEntity }) {
     <div class="summary-stat"><div class="lbl">Distinct Images</div><div class="val">${fmtNum(imgSum)}</div></div>
     <div class="summary-stat"><div class="lbl">CS POCs</div><div class="val">${fmtNum(distinctCs.size)}</div></div>
     <div class="summary-stat"><div class="lbl">OB POCs</div><div class="val">${fmtNum(distinctOb.size)}</div></div>
+    ${COLS.enterpriseName ? `<div class="summary-stat"><div class="lbl">Enterprises</div><div class="val">${fmtNum(distinctEnt.size)}</div></div>` : ''}
+    ${COLS.teamName ? `<div class="summary-stat"><div class="lbl">Teams</div><div class="val">${fmtNum(distinctTeam.size)}</div></div>` : ''}
     ${COLS.segment ? `<div class="summary-stat"><div class="lbl">Segments</div><div class="val">${fmtNum(distinctSeg.size)}</div></div>` : ''}
   `;
   body.appendChild(summary);
@@ -1602,6 +1680,84 @@ function showDrill({ title, sub, rows, customTable, focusDate, focusEntity }) {
     });
   }
 
+  // ---- POC-specific drill: associated enterprises + teams, with clickable rows ----
+  if (focusPOC) {
+    const renderEntityTable = (col, label, kind) => {
+      if (!col) return;
+      const m = new Map();
+      for (const r of rows) {
+        const k = r[col]; if (!k) continue;
+        const n = COLS.imgCount ? (Number(r[COLS.imgCount]) || 0) : 0;
+        if (!m.has(k)) m.set(k, { images: 0, skus: new Set(), days: new Set() });
+        const o = m.get(k);
+        o.images += n;
+        if (COLS.sku && r[COLS.sku]) o.skus.add(r[COLS.sku]);
+        if (COLS.created) { const d = parseDateKey(r[COLS.created]); if (d) o.days.add(d); }
+      }
+      const arr = [...m.entries()].sort((a,b) => b[1].images - a[1].images);
+      if (!arr.length) return;
+      const t = document.createElement('div'); t.className = 'modal-section-title';
+      t.textContent = `Associated ${label.toLowerCase()}s · ${arr.length} distinct · click any row to filter the dashboard`;
+      body.appendChild(t);
+      const tbl = document.createElement('table'); tbl.className = 'modal-table';
+      tbl.innerHTML = `<thead><tr>
+        <th>${label}</th>
+        <th style="text-align:right">Distinct images</th>
+        <th style="text-align:right">SKUs</th>
+        <th style="text-align:right">Active days</th>
+      </tr></thead><tbody>${arr.slice(0, 200).map(([k, o]) =>
+        `<tr data-entity="${k.replace(/"/g, '&quot;')}" style="cursor:pointer">
+          <td>${k}</td>
+          <td class="num">${o.images.toLocaleString()}</td>
+          <td class="num">${o.skus.size.toLocaleString()}</td>
+          <td class="num">${o.days.size}</td>
+        </tr>`).join('')}</tbody>`;
+      tbl.querySelectorAll('tbody tr').forEach(tr => {
+        tr.addEventListener('click', () => {
+          const val = tr.getAttribute('data-entity');
+          const fs = kind === 'ent' ? filters.enterprises : filters.teams;
+          const pocSet = focusPOC.kind === 'cs' ? filters.csEmails : filters.obEmails;
+          pocSet.clear(); pocSet.add(focusPOC.val);
+          fs.clear(); fs.add(val);
+          closeModal();
+          populateFilterOptions();
+          applyAndRender();
+        });
+        tr.addEventListener('mouseenter', () => tr.style.background = 'var(--bg-elev)');
+        tr.addEventListener('mouseleave', () => tr.style.background = '');
+      });
+      body.appendChild(tbl);
+      if (arr.length > 200) {
+        const more = document.createElement('div'); more.className = 'modal-section-title';
+        more.textContent = `Showing first 200 of ${arr.length}`;
+        body.appendChild(more);
+      }
+    };
+    renderEntityTable(COLS.enterpriseName, 'Enterprise', 'ent');
+    renderEntityTable(COLS.teamName, 'Team', 'team');
+
+    // Day-by-day image volume for this POC
+    if (COLS.firstImg || COLS.created) {
+      const dateCol = COLS.firstImg || COLS.created;
+      const dayMap = new Map();
+      for (const r of rows) {
+        const day = parseDateKey(r[dateCol]); if (!day) continue;
+        const n = COLS.imgCount ? (Number(r[COLS.imgCount]) || 0) : 1;
+        dayMap.set(day, (dayMap.get(day) || 0) + n);
+      }
+      const dayArr = [...dayMap.entries()].sort();
+      if (dayArr.length) {
+        const t = document.createElement('div'); t.className = 'modal-section-title';
+        t.textContent = `Day-by-day images`;
+        body.appendChild(t);
+        const tbl = document.createElement('table'); tbl.className = 'modal-table';
+        tbl.innerHTML = `<thead><tr><th>Date</th><th style="text-align:right">Distinct images</th></tr></thead>
+          <tbody>${dayArr.map(([d,v]) => `<tr><td>${d}</td><td class="num">${v.toLocaleString()}</td></tr>`).join('')}</tbody>`;
+        body.appendChild(tbl);
+      }
+    }
+  }
+
   // Breakdown by segment (if data available)
   if (COLS.segment && !customTable) {
     const segMap = new Map();
@@ -1649,11 +1805,14 @@ function showDrill({ title, sub, rows, customTable, focusDate, focusEntity }) {
 
   document.getElementById('modal').classList.add('visible');
 }
-document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal').classList.remove('visible'));
-document.getElementById('modal').addEventListener('click', (e) => {
-  if (e.target.id === 'modal') document.getElementById('modal').classList.remove('visible');
-});
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.getElementById('modal').classList.remove('visible'); });
+function closeModal() {
+  document.getElementById('modal').classList.remove('visible');
+  const actBtn = document.getElementById('modal-action');
+  actBtn.style.display = 'none'; actBtn.onclick = null;
+}
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
 // ============================================================
 // UI WIRING
@@ -1746,6 +1905,7 @@ function isoDate(d) {
 document.getElementById('clear-all').addEventListener('click', () => {
   filters.dateFrom = null; filters.dateTo = null;
   filters.csEmails.clear(); filters.obEmails.clear(); filters.segments.clear();
+  filters.enterprises.clear(); filters.teams.clear();
   document.getElementById('date-from').value = '';
   document.getElementById('date-to').value = '';
   clearActiveQuickRange();
