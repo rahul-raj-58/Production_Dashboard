@@ -863,7 +863,7 @@
       <div class="card-head">
         <div>
           <h3>Top enterprises by AI accuracy</h3>
-          <div class="sub">100 − ((images − edited) / images × 100) · top 15 · click to drill</div>
+          <div class="sub">((images − edited) / images × 100) · top 15 · click to drill</div>
         </div>
         <div class="controls">
           <button class="toggle active" data-acc-ent-view="chart">Chart</button>
@@ -1814,9 +1814,8 @@ function renderCRM(rows) {
 }
 
 // ---------- AI Accuracy by enterprise / team ----------
-// Formula per group: 100 - ((sum_images - sum_edited) / sum_images * 100)
-// Equivalent to: (sum_edited / sum_images) * 100 — i.e. % of images that were edited.
-// (Per user spec: this is the dashboard's "AI accuracy" metric.)
+// Formula per group: ((sum_images - sum_edited) / sum_images) * 100
+// I.e. % of images that did NOT require editing — higher = better AI accuracy.
 const ACC_VIEW = { ent: 'chart', team: 'chart' };
 function renderAccuracy(kind, rows) {
   const col = kind === 'ent' ? COLS.enterpriseName : COLS.teamName;
@@ -1846,7 +1845,7 @@ function renderAccuracy(kind, rows) {
       images: o.images,
       edited: o.edited,
       skus: o.skus.size,
-      accuracy: o.images > 0 ? (100 - ((o.images - o.edited) / o.images * 100)) : 0
+      accuracy: o.images > 0 ? ((o.images - o.edited) / o.images * 100) : 0
     }))
     .filter(o => o.images > 0)
     .sort((a, b) => b.accuracy - a.accuracy);
@@ -2211,7 +2210,7 @@ function drillAccuracy(kind, val) {
     if (COLS.imgCount && r[COLS.imgCount]) { const n = Number(r[COLS.imgCount]); if (!isNaN(n)) images += n; }
     if (COLS.editedCount && r[COLS.editedCount]) { const n = Number(r[COLS.editedCount]); if (!isNaN(n)) edited += n; }
   }
-  const accuracy = images > 0 ? (100 - ((images - edited) / images * 100)) : 0;
+  const accuracy = images > 0 ? ((images - edited) / images * 100) : 0;
   const filterSet = kind === 'ent' ? filters.enterprises : filters.teams;
   const isActive = filterSet.has(val);
   showDrill({
