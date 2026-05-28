@@ -418,6 +418,18 @@
     content: ''; position: absolute; left: 0; top: 0; width: 3px; height: 100%;
     background: var(--tile-color, var(--accent));
   }
+  /* Blank-status tile: subtler look so it doesn't compete with real statuses */
+  .crm-tile.crm-tile-blank {
+    background: rgba(255,255,255,0.015);
+    border-style: dashed; border-color: var(--border-strong);
+  }
+  .crm-tile.crm-tile-blank::before {
+    background: repeating-linear-gradient(45deg,
+      var(--text-mute), var(--text-mute) 3px,
+      transparent 3px, transparent 6px);
+    opacity: 0.6;
+  }
+  .crm-tile.crm-tile-blank .sku-count { color: var(--text-dim); }
   .crm-tile .status-label {
     font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px;
@@ -1771,10 +1783,13 @@ function renderCRM(rows) {
     return;
   }
   // Aggregate per status: distinct SKUs, total images, edited images
+  // Empty/null/whitespace values are bucketed as "(blank)" so they show up as their own tile.
+  const BLANK = '(blank)';
   const map = new Map();
   for (const r of rows) {
-    const k = r[COLS.crmStatus]; if (!k) continue;
-    if (!map.has(k)) map.set(k, { skus: new Set(), images: 0, edited: 0, rows: 0 });
+    const raw = r[COLS.crmStatus];
+    const k = (raw == null || String(raw).trim() === '') ? BLANK : raw;
+    if (!map.has(k)) map.set(k, { skus: new Set(), images: 0, edited: 0, rows: 0, isBlank: k === BLANK });
     const o = map.get(k);
     o.rows++;
     if (COLS.sku && r[COLS.sku]) o.skus.add(r[COLS.sku]);
@@ -1782,30 +1797,33 @@ function renderCRM(rows) {
     if (COLS.editedCount && r[COLS.editedCount]) { const n = Number(r[COLS.editedCount]); if (!isNaN(n)) o.edited += n; }
   }
   const entries = [...map.entries()]
-    .map(([k, o]) => ({ k, skus: o.skus.size, images: o.images, edited: o.edited, rows: o.rows }))
+    .map(([k, o]) => ({ k, skus: o.skus.size, images: o.images, edited: o.edited, rows: o.rows, isBlank: o.isBlank }))
     .sort((a, b) => b.skus - a.skus);
   const totalSkus = entries.reduce((s, e) => s + e.skus, 0) || 1;
   grid.innerHTML = '';
   entries.forEach((e, i) => {
-    const color = PALETTE[i % PALETTE.length];
+    const color = e.isBlank ? '#5a6573' : PALETTE[i % PALETTE.length];
     const pct = (e.skus / totalSkus * 100);
     const editRate = e.images > 0 ? (e.edited / e.images * 100) : 0;
     const tile = document.createElement('div');
-    tile.className = 'crm-tile';
+    tile.className = 'crm-tile' + (e.isBlank ? ' crm-tile-blank' : '');
     tile.style.setProperty('--tile-color', color);
-    tile.title = `Click to drill into "${e.k}"`;
+    tile.title = e.isBlank
+      ? `Click to drill into rows with no CRM status set`
+      : `Click to drill into "${e.k}"`;
+    const displayLabel = e.isBlank ? '⌀  No status set' : e.k;
     tile.innerHTML = `
-      <div class="status-label" style="color:${color}">${e.k}</div>
+      <div class="status-label" style="color:${color}">${displayLabel}</div>
       <div class="sku-count">${fmtNum(e.skus)}</div>
       <div class="pct-bar"><div class="pct-bar-fill" style="width:${pct}%"></div></div>
-      <div class="pct-label">${pct.toFixed(1)}% of SKUs</div>
+      <div class="pct-label">${pct.toFixed(1)}% of SKUs · ${fmtNum(e.rows)} rows</div>
       <div class="sub-stats">
         <div class="stat"><div class="v">${fmtNum(e.images)}</div><div class="l">Images</div></div>
         ${COLS.editedCount ? `<div class="stat"><div class="v">${fmtNum(e.edited)}</div><div class="l">Edited</div></div>` : ''}
         ${COLS.editedCount && COLS.imgCount ? `<div class="stat"><div class="v">${editRate.toFixed(1)}%</div><div class="l">Edit rate</div></div>` : ''}
       </div>
     `;
-    tile.addEventListener('click', () => drillCRM(e.k));
+    tile.addEventListener('click', () => drillCRM(e.isBlank ? null : e.k));
     grid.appendChild(tile);
   });
   if (entries.length === 0) {
@@ -2191,11 +2209,17 @@ function drillEntity(kind, val) {
 }
 function drillCRM(val) {
   if (!COLS.crmStatus) return;
-  const rows = getFilteredRows().filter(r => r[COLS.crmStatus] === val);
+  const isBlank = val == null;
+  const rows = getFilteredRows().filter(r => {
+    const v = r[COLS.crmStatus];
+    return isBlank
+      ? (v == null || String(v).trim() === '')
+      : v === val;
+  });
   const skus = new Set();
   for (const r of rows) if (COLS.sku && r[COLS.sku]) skus.add(r[COLS.sku]);
   showDrill({
-    title: `CRM status · ${val}`,
+    title: isBlank ? 'CRM status · (no status set)' : `CRM status · ${val}`,
     sub: `${skus.size.toLocaleString()} distinct SKUs · ${rows.length.toLocaleString()} rows`,
     rows
   });
